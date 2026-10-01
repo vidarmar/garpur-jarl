@@ -241,6 +241,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
+const APP_VERSION='1.2', APP_DATE='1 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -693,7 +694,8 @@ function viewWelcome(){
   <div class="card stack"><h3>Every exercise, shown</h3><p class="muted small">Animated demos for all 45 exercises, plus the safer versions for knees, shoulders and back.</p>
     <button class="demo" data-act="toggleanim" aria-label="Animated exercises. Tap to pause."><svg viewBox="0 -22 240 192" data-anim="Farmer carry" data-cycle="Farmer carry|Goblet squat|Romanian deadlift|Lateral raise|Dumbbell step-up|Hip thrust" role="img"></svg><span class="demo-state">Farmer carry</span></button></div>
   <p class="fact">After 50, men lose muscle faster every year. Strength training is the most effective way to slow it down.<small>That\u2019s why every Jarl session is built around lifting, not steps.</small></p>
-  <button class="btn primary" data-act="welcome-go">Build my plan</button>`;
+  <button class="btn primary" data-act="welcome-go">Build my plan</button>
+  <p class="muted small num" style="text-align:center">Version ${APP_VERSION} \u00b7 ${APP_DATE}</p>`;
 }
 function viewProgram(){
   const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
@@ -796,7 +798,8 @@ function viewProfile(){
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
-  <p class="note">Jarl is a training guide, not medical advice. If you have heart problems, high blood pressure or recent surgery, check with your doctor before you start. Stop any exercise that causes sharp pain.</p>`;
+  <p class="note">Jarl is a training guide, not medical advice. If you have heart problems, high blood pressure or recent surgery, check with your doctor before you start. Stop any exercise that causes sharp pain.</p>
+  <p class="muted small num" style="text-align:center">Version ${APP_VERSION} \u00b7 ${APP_DATE}</p>`;
 }
 
 /* ---------- Player ---------- */
