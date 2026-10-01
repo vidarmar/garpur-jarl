@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -75,6 +76,16 @@ p{margin:0}
 .brand{display:flex;align-items:baseline;gap:10px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .brand b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:1.35rem;letter-spacing:.14em;color:var(--brass)}
 .brand span{font-size:.85rem;color:var(--muted)}
+/* training days */
+.daychips{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.daychips button{min-height:48px;border-radius:10px;background:var(--sunk);font-weight:700;font-size:.85rem;color:var(--muted)}
+.daychips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.daypick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.daypick .opt{align-items:center;text-align:center}
+.daypick .opt:disabled{opacity:.45;cursor:not-allowed}
+button.day{font:inherit;color:inherit;cursor:pointer}
+button.day .dot{box-shadow:0 0 0 0 transparent}
+button.day:hover .dot{background:var(--accent-soft)}
 /* front page */
 .hero{--suit:var(--hero-suit);--hair:var(--hero-hair);--ink:var(--hero-ink);--far:var(--hero-far);--eq:var(--hero-eq);--eqsoft:var(--hero-eqsoft);--brass:var(--hero-brass);--bg:var(--hero-bg);--muted:var(--hero-muted);--sunk:transparent;
   background:var(--hero-bg);color:var(--hero-ink);border-radius:22px;padding:24px 20px 20px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
@@ -349,17 +360,20 @@ const state = {
     'Dumbbell step-up':{w:10,r:[10,10,10]},'Incline push-up':{r:[12,11,10]},'Seated cable row':{w:40,r:[12,12,12]},
     'Hip thrust':{w:24,r:[12,11,11]},'Pallof press':{r:[10,10]},'Single-leg calf raise':{r:[12,11]}
   },
+  days:[0,2,4], weekOverride:null,
   health:{connected:false}, scheme:'fjord', welcome:true, onboard:false,
   player:null
 };
 try{if(localStorage.getItem('jarl-welcome')) state.welcome=false}catch(e){}
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord'}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
-function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',days:s.days||[0,2,4],weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
+function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
 const short = t=>new Date(t).toLocaleDateString('en-GB',{weekday:'short'});
+const NUM={A:1,B:2,C:3}, TN=s=>`Training ${NUM[s]}`;
+const DAYNAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const nextLetter = s=>ORDER[(ORDER.indexOf(s)+1)%3];
 const lastSession = ()=>state.history.reduce((a,b)=>b.d>a.d?b:a,state.history[0]);
 function recovery(){
@@ -585,44 +599,62 @@ function connectSheet(){
 }
 
 /* ---------- Views ---------- */
+const MON=T0-((new Date(T0).getDay()+6)%7)*DAY;
+function weekDays(){const o=state.weekOverride; return (o&&o.mon===MON?o.days:state.days).slice().sort((a,b)=>a-b)}
 function weekPlan(){
-  const mon=T0-((new Date(T0).getDay()+6)%7)*DAY; const end=mon+7*DAY;
-  const done=state.history.filter(h=>h.d>=mon&&h.d<end);
-  const rec=recovery(); const plan=[];
-  let d=rec.doneToday? T0+2*DAY : rec.nextDate, s=rec.next, n=done.length;
-  while(n<3&&d<end){plan.push({d,s});s=nextLetter(s);d+=2*DAY;n++}
-  return {mon,done,plan};
+  const mon=MON, end=mon+7*DAY, done=state.history.filter(h=>h.d>=mon&&h.d<end), rec=recovery(), days=weekDays();
+  let left=Math.max(0,days.length-done.length), s=rec.next; const plan=[];
+  for(const i of days){const d=mon+i*DAY; if(!left) break; if(d<T0||(d===T0&&rec.doneToday)||done.some(h=>h.d===d)) continue; plan.push({d,s,i}); s=nextLetter(s); left--;}
+  return {mon,done,plan,days};
+}
+function currentS(){const w=weekPlan(),t=w.plan.find(p=>p.d===T0);return t?t.s:recovery().next}
+function nextTraining(){const p=weekPlan().plan.find(x=>x.d>T0||(x.d===T0&&!recovery().doneToday)); return p?p.d:MON+7*DAY+Math.min(...state.days)*DAY}
+function consecutive(days){const d=days.slice().sort((a,b)=>a-b); return d.some((x,k)=>d.includes((x+1)%7))}
+function moveSheet(fromIdx){
+  const wk=weekPlan(), p=wk.plan.find(x=>x.i===fromIdx); if(!p) return;
+  const opts=[...Array(7)].map((_,i)=>i).filter(i=>{const d=MON+i*DAY; return d>=T0&&!wk.done.some(h=>h.d===d)});
+  sheet(`<span class="eyebrow">This week</span><h2>Move ${TN(p.s)}</h2><p class="muted">Pick a new day. Your usual training days stay the same next week.</p>
+   <div class="daypick">${opts.map(i=>{const taken=wk.days.includes(i)&&i!==fromIdx;return `<button class="opt" data-act="movetoday" data-from="${fromIdx}" data-to="${i}" aria-pressed="${i===fromIdx}" ${taken?'disabled':''}><b>${DAYNAMES[i]}</b><span class="muted small">${fmtDay(MON+i*DAY,{day:'numeric',month:'short'})}${taken?' \u00b7 training':''}</span></button>`}).join('')}</div>
+   <button class="btn ghost" data-act="closesheet">Cancel</button>`);
+}
+function moveTo(from,to){
+  const days=weekDays().filter(x=>x!==from); if(!days.includes(to)) days.push(to);
+  state.weekOverride={mon:MON,days}; save();
 }
 function viewToday(){
-  const rec=recovery(), wk=weekPlan(), s=rec.next;
+  const rec=recovery(), wk=weekPlan(), today=wk.plan.find(p=>p.d===T0), upcoming=wk.plan.find(p=>p.d>T0), s=today?today.s:rec.next;
   const days=[...Array(7)].map((_,i)=>{const t=wk.mon+i*DAY; const dn=wk.done.find(h=>h.d===t); const pl=wk.plan.find(p=>p.d===t);
-    const cls=['day',dn?'done':pl?'plan':'',t===T0?'today':''].join(' ');
-    return `<div class="${cls}" aria-label="${fmtDay(t)}${dn?', session '+dn.s+' done':pl?', session '+pl.s+' planned':', rest'}"><span>${short(t).slice(0,2)}</span><span class="dot">${dn?dn.s:pl?pl.s:''}</span></div>`}).join('');
+    const cls=['day',dn?'done':pl?'plan':'',t===T0?'today':''].join(' '), lbl=`${fmtDay(t)}${dn?', '+TN(dn.s)+' done':pl?', '+TN(pl.s)+' planned. Tap to move':', rest'}`;
+    const inner=`<span>${short(t).slice(0,2)}</span><span class="dot">${dn?NUM[dn.s]:pl?NUM[pl.s]:''}</span>`;
+    return pl?`<button class="${cls}" data-act="move" data-i="${i}" aria-label="${lbl}">${inner}</button>`:`<div class="${cls}" aria-label="${lbl}">${inner}</div>`}).join('');
   let head, coach, cta='';
+  const nextTxt=upcoming?`${TN(upcoming.s)} is on <b>${fmtDay(upcoming.d)}</b>.`:`All of this week\u2019s training is done. Next: <b>${fmtDay(nextTraining())}</b>.`;
   if(rec.doneToday){
-    head=`Session ${rec.last.s} done`; coach=`<p class="coach rest">Good work. Your muscles rebuild over the next 48 hours, so tomorrow is a rest day. Next session: <b>${fmtDay(rec.last.d+2*DAY)}</b>.</p>`;
-  } else if(rec.ready){
-    head=`Session ${s} is ready`;
-    coach=`<p class="coach">${rec.days} days since your last session, so you’ve recovered. About ${minutes(s)} minutes. Stop each set with 1–2 reps left in the tank.</p>`;
-    cta=`<button class="btn primary" data-act="start" data-s="${s}">Start session ${s}</button>`;
+    head=`${TN(rec.last.s)} done`; coach=`<p class="coach rest">Good work. Your muscles rebuild over the next 48 hours. ${nextTxt}</p>`;
+  } else if(today){
+    head=`${TN(s)} is today`;
+    coach=rec.days>=2?`<p class="coach">${rec.days} days since your last training, so you\u2019ve recovered. About ${minutes(s)} minutes. Stop each set with 1\u20132 reps left in the tank.</p>`
+      :`<p class="coach rest">You also trained yesterday. That\u2019s fine now and then: keep last time\u2019s weights and stop 2\u20133 reps short. Or move today\u2019s training to a later day.</p>`;
+    cta=`<button class="btn primary" data-act="start" data-s="${s}">Start ${TN(s)}</button>`;
   } else {
     head='Rest day';
-    coach=`<p class="coach rest">You trained yesterday. Muscle is built while you rest, not while you lift. A 30-minute walk or the mobility routine below is the right move today. Session ${s} is ready on <b>${fmtDay(rec.nextDate)}</b>.</p>`;
+    coach=`<p class="coach rest">${rec.days<2?'You trained yesterday. ':''}Muscle is built while you rest, not while you lift. A 30-minute walk or the mobility routine below is the right move today. ${nextTxt}</p>`;
+    if(upcoming) cta=`<button class="btn ghost" data-act="trainnow" data-i="${upcoming.i}">Train today instead</button>`;
   }
   const list=exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button>${r.alt?`<span class="pill">${JOINT[r.altFor]}</span>`:''}</div><span class="sr num">${repLabel(r)}</span></li>`}).join('');
   const doneN=wk.done.length;
   return `
   <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}</div>
   <div class="card stack">
-    <div class="row between"><h2>Session ${s}</h2><span class="pill plain num">~${minutes(s)} min</span></div>
+    <div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div>
     <p class="muted small">${PROGRAM[s].focus}. Warm-up first: 3 minutes. Tap an exercise to see how it\u2019s done.</p>
     <ol class="exlist">${list}</ol>
     ${cta}
   </div>
   <div class="stack">
-    <div class="row between"><h3>This week</h3><span class="muted small num">${doneN} of 3 done</span></div>
+    <div class="row between"><h3>This week</h3><span class="muted small num">${doneN} of ${Math.max(wk.days.length,doneN)} done</span></div>
     <div class="week">${days}</div>
-    <p class="muted small">${doneN>=2?'Two sessions keep your muscle. Three build it. Anything beyond that is a bonus.':'Aim for three sessions with a rest day between each.'}</p>
+    <p class="muted small">Tap a planned day to move it. ${doneN>=2?'Two trainings a week keep your muscle, three build it.':'Aim for a rest day between trainings.'} <button class="btn link small" style="min-height:0;padding:0" data-act="gotodays">Change your usual days</button></p>
   </div>
   <div class="stack">
     <div class="row between"><h3>Your three numbers</h3><button class="btn link" data-tab="progress">Details</button></div>
@@ -665,7 +697,7 @@ function viewWelcome(){
 }
 function viewProgram(){
   const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
-  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>Session ${s}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p><ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
+  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p><ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
   return `
   <div class="stack"><span class="eyebrow">Your program</span><h1>Three full-body sessions a week</h1>
   <p>Every session trains the whole body, so missing one day never leaves a muscle group behind. Keep at least one rest day between sessions.</p></div>
@@ -677,7 +709,7 @@ function viewProgram(){
       <li>Each session ends with balance work. It’s the best protection against falls.</li>
     </ol></div>
   <div class="stack"><h3>What each session trains</h3>
-    <div class="tblwrap card" style="padding:6px 14px"><table class="cov"><thead><tr><th scope="col">Muscle group</th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th></tr></thead><tbody>${cov}</tbody></table></div></div>
+    <div class="tblwrap card" style="padding:6px 14px"><table class="cov"><thead><tr><th scope="col">Muscle group</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead><tbody>${cov}</tbody></table></div></div>
   ${sessions}`;
 }
 function spark(vals,{w=320,h=90,fmt=v=>v,color='var(--accent)'}={}){
@@ -757,6 +789,9 @@ function viewProfile(){
     <div class="src"><span><b>Chest strap</b><br><span class="muted small">Polar H10 and other Bluetooth straps. Most accurate for strength work</span></span><span class="status off">Coming</span></div>
     <p class="muted small" style="padding-top:8px">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
   </div>
+  <div class="card stack" id="days"><h3>Training days</h3>
+    <div class="daychips" role="group" aria-label="Training days">${DAYNAMES.map((d,i)=>`<button data-act="toggleday" data-i="${i}" aria-pressed="${state.days.includes(i)}">${d}</button>`).join('')}</div>
+    <p class="muted small">Pick 2 or 3 days. Trainings 1, 2 and 3 rotate across them. ${consecutive(state.days)?'<b>Two of your days are back to back.</b> That works, but a rest day between is better for recovery after 50.':'A rest day between each is ideal.'} You can still move a single training on the Today screen.</p></div>
   <div class="card stack"><h3>Colours</h3>${seg('scheme',[['fjord','Fjord'],['pine','Pine']])}<p class="muted small">${state.scheme==='fjord'?'Deep fjord blue with brass details.':'Pine green with brass details.'} Dark mode follows your phone.</p></div>
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
@@ -800,7 +835,7 @@ function renderPlayer(){
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
-   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">Session ${P.s}</b><div class="muted small num" id="elapsed">0:00</div></div>${state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="close">Close</button></div></div>
+   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b><div class="muted small num" id="elapsed">0:00</div></div>${state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="close">Close</button></div></div>
    <div class="pwrap">${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
@@ -850,11 +885,11 @@ function completeSession(effort){
   const hl=P.hrLog, avg=hl.length?Math.round(hl.reduce((a,b)=>a+b,0)/hl.length):0, peak=hl.length?Math.round(Math.max(...hl)):0;
   const hrLine=state.health.connected&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
   const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
-  sheet(`<span class="eyebrow">Session ${s} done</span><h2>That’s the work done for today</h2>
+  sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
    <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/3</b></div></div>
    ${hrLine}
    <p class="coach">${msg}</p>
-   <p class="coach rest">Tomorrow is a rest day. A 30-minute walk counts. Next session: <b>${fmtDay(T0+2*DAY)}</b>.</p>
+   <p class="coach rest">Tomorrow is a rest day. A 30-minute walk counts. Next training: <b>${fmtDay(nextTraining())}</b>.</p>
    <button class="btn primary" data-act="closesheet">Back to Today</button>`);
   state.tab='today'; render();
 }
@@ -863,7 +898,7 @@ function completeSession(effort){
 function sheet(html){const s=$('#sheet'); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
 function closeSheet(){if(typeof mobStop==='function')mobStop();$('#sheet').hidden=true; $('#sheet').innerHTML='';}
 function swapSheet(i){
-  const P=state.player, e=exFor(P?P.s:recovery().next)[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
+  const P=state.player, e=exFor(P?P.s:currentS())[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
   if(!e.alts.length){sheet(`<h2>${e.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
   sheet(`<h2>Swap ${e.name.toLowerCase()}</h2><p class="muted">Same muscles, different stress on the joints.</p>
    <button class="opt" data-act="pick" data-i="${i}" data-a="-1" aria-pressed="${curIdx===-1}"><b>${e.name}</b><span class="muted small">Standard version</span></button>
@@ -927,14 +962,14 @@ document.addEventListener('click',ev=>{
     case 'mobility': mobilitySheet(); break;
     case 'mob': mobilitySheet(+t.dataset.i); break;
     case 'mobtimer': mobTimer(); break;
-    case 'mobdone': mobStop(); sheet(`<span class="eyebrow">Rest-day routine</span><h2>Done. That\u2019s your mobility for today.</h2><p class="coach rest">Loose hips and a mobile upper back make every lift safer. Next strength session: <b>${fmtDay(recovery().nextDate)}</b>.</p><button class="btn primary" data-act="closesheet">Close</button>`); break;
+    case 'mobdone': mobStop(); sheet(`<span class="eyebrow">Rest-day routine</span><h2>Done. That\u2019s your mobility for today.</h2><p class="coach rest">Loose hips and a mobile upper back make every lift safer. Next training: <b>${fmtDay(nextTraining())}</b>.</p><button class="btn primary" data-act="closesheet">Close</button>`); break;
     case 'open': openEx(+t.dataset.i); break;
     case 'warmdone': openEx(0); break;
     case 'adj': {const k=t.dataset.k; P.cur[k]=Math.max(0,P.cur[k]+(+t.dataset.d)); renderPlayer(); break;}
     case 'log': logSet(); break;
     case 'skip': {const nx=P.idx+1<exFor(P.s).length?P.idx+1:99; P.rest=null; nx===99?(P.idx=99,renderPlayer()):openEx(nx); break;}
     case 'swap': swapSheet(+t.dataset.i); break;
-    case 'pick': {const e=exFor(P?P.s:recovery().next)[+t.dataset.i]; state.swaps[e.id]=+t.dataset.a; save(); closeSheet(); if(P){openEx(+t.dataset.i)} else render(); break;}
+    case 'pick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.swaps[e.id]=+t.dataset.a; save(); closeSheet(); if(P){openEx(+t.dataset.i)} else render(); break;}
     case 'restadd': P.rest.end+=15e3; P.rest.total+=15; tick(); break;
     case 'restskip': P.rest=null; tick(); break;
     case 'close': closePlayer(); break;
@@ -942,6 +977,11 @@ document.addEventListener('click',ev=>{
     case 'effort': closeSheet(); completeSession(t.dataset.v); break;
     case 'closesheet': closeSheet(); break;
     case 'connect': connectSheet(); break;
+    case 'move': moveSheet(+t.dataset.i); break;
+    case 'movetoday': moveTo(+t.dataset.from,+t.dataset.to); closeSheet(); render(); break;
+    case 'trainnow': {const ti=(new Date(T0).getDay()+6)%7; moveTo(+t.dataset.i,ti); render(); window.scrollTo(0,0); break;}
+    case 'gotodays': state.tab='profile'; render(); setTimeout(()=>{const el=document.getElementById('days'); el&&el.scrollIntoView({block:'start'})},50); break;
+    case 'toggleday': {const i=+t.dataset.i, d=state.days; if(d.includes(i)){ if(d.length>2) state.days=d.filter(x=>x!==i); } else { if(d.length<3) state.days=[...d,i]; else {state.days=[...d.slice(1),i];} } state.weekOverride=null; save(); render(); setTimeout(()=>{const el=document.getElementById('days'); el&&el.scrollIntoView({block:'center'})},0); break;}
     case 'welcome-go': state.welcome=false; state.onboard=true; state.tab='profile'; try{localStorage.setItem('jarl-welcome','1')}catch(e){} render(); window.scrollTo(0,0); break;
     case 'welcome-skip': state.welcome=false; state.tab='today'; try{localStorage.setItem('jarl-welcome','1')}catch(e){} render(); window.scrollTo(0,0); break;
     case 'welcome-show': state.welcome=true; render(); window.scrollTo(0,0); break;
