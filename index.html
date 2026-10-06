@@ -45,7 +45,7 @@
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.125rem;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
 h1,h2,h3{font-family:var(--display);font-stretch:112%;margin:0;text-wrap:balance;line-height:1.15}
@@ -76,6 +76,9 @@ p{margin:0}
 .brand{display:flex;align-items:baseline;gap:10px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .brand b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:1.35rem;letter-spacing:.14em;color:var(--brass)}
 .brand span{font-size:.85rem;color:var(--muted)}
+/* 1.7 */
+.ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.breath{background:var(--rest-soft);color:var(--ink);border-radius:10px;padding:8px 12px}
 /* user agreement */
 #terms{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:30;padding-top:env(safe-area-inset-top,0px)}
 .legal{max-width:480px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;display:flex;flex-direction:column;gap:12px}
@@ -89,8 +92,8 @@ p{margin:0}
 .check input{width:24px;height:24px;margin:2px 0 0;accent-color:var(--accent)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 /* training days */
-.daychips{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.daychips button{min-height:48px;border-radius:10px;background:var(--sunk);font-weight:700;font-size:.85rem;color:var(--muted)}
+.daychips{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.daychips button{min-width:0;padding:0;min-height:48px;border-radius:10px;background:var(--sunk);font-weight:700;font-size:.78rem;color:var(--muted)}
 .daychips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .daypick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .daypick .opt{align-items:center;text-align:center}
@@ -254,18 +257,19 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='1.6', APP_DATE='6 Oct 2026';
+const APP_VERSION='1.7', APP_DATE='6 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
 /* ---------- Program ---------- */
-const WARMUP = ['Arm circles, 30 s','Hip hinges, 10 slow reps','Sit-to-stand from a chair, 10 reps','Cat-cow, 8 reps','March in place, 60 s'];
+const WARMUP3 = ['Arm circles, 30 s','Hip hinges, 10 slow reps','Sit-to-stand from a chair, 10 reps','Cat-cow, 8 reps','March in place, 60 s'];
+const WARMUP5 = [...WARMUP3,'Arm swings across the body, 30 s','Hip circles, 10 each way','Slow bodyweight squats to a chair, 10 reps'];
 const PROGRAM = {
   A:{focus:'Squat, push, row, carry',ex:[
     {id:'goblet',name:'Goblet squat',m:['Quads','Glutes','Core'],sets:3,lo:8,hi:10,rest:75,unit:'kg',start:16,
      cue:'Hold the dumbbell at your chest. Sit down between your heels, chest up. Stop where your knees stay comfortable.',
      alts:[{for:'knee',name:'Box squat',start:12,cue:'Sit back to a bench and stand up without rocking. The bench limits depth so the knees stay happy.'},
-           {for:'back',name:'Leg press',start:60,cue:'Your back stays supported. Lower until the knees reach about 90 degrees.'}]},
+           {for:'back',gym:1,name:'Leg press',start:60,cue:'Your back stays supported. Lower until the knees reach about 90 degrees.'}]},
     {id:'bench',name:'Dumbbell bench press',m:['Chest','Shoulders','Arms'],sets:3,lo:8,hi:10,rest:75,unit:'kg',start:14,
      cue:'Lower the dumbbells to chest level, elbows about 45 degrees from your body. Press up and slightly together.',
      alts:[{for:'shoulder',name:'Dumbbell floor press',start:14,cue:'Lie on the floor, palms facing each other. The floor stops your elbows before the shoulder is stretched.'}]},
@@ -284,17 +288,17 @@ const PROGRAM = {
     {id:'stand',name:'Single-leg stand',m:['Balance','Calves'],sets:2,lo:20,hi:30,rest:20,unit:'sec',each:true,
      cue:'Stand next to a wall. Lift one foot and hold. To make it harder, turn your head slowly side to side.',
      alts:[{for:'knee',name:'Tandem stance',cue:'One foot directly in front of the other, then hold. Less load on the standing knee.'}]},
-    {id:'z2',name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
+    {id:'z2',gym:1,name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
      cue:'Bike, rower or a brisk incline walk. Keep a pace where you can still talk in full sentences. Finish with two minutes of slow walking.',
-     alts:[{for:'knee',name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'}]}
+     alts:[{for:'knee',gym:1,name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'},{for:'home',name:'Brisk walk',cue:'Walk outdoors at a pace where you can talk but not sing. Swing your arms. Finish with two minutes of slow walking.'}]}
   ]},
   B:{focus:'Hinge, pull, press, lunge',ex:[
     {id:'rdl',name:'Romanian deadlift',m:['Hamstrings','Glutes','Back'],sets:3,lo:8,hi:10,rest:75,unit:'kg',start:16,
      cue:'Soft knees, push the hips back and let the weights slide down your thighs. Stop when you feel the hamstrings. Keep a flat back.',
      alts:[{for:'back',name:'Glute bridge',start:10,cue:'On your back, feet flat, dumbbell on the hips. Drive the hips up. Same muscles, no forward bend.'}]},
-    {id:'pulldown',name:'Lat pulldown',m:['Back','Arms'],sets:3,lo:10,hi:12,rest:60,unit:'kg',start:35,
+    {id:'pulldown',gym:1,name:'Lat pulldown',m:['Back','Arms'],sets:3,lo:10,hi:12,rest:60,unit:'kg',start:35,
      cue:'Pull the bar to your upper chest. Think of driving the elbows down toward your back pockets.',
-     alts:[{for:'shoulder',name:'Neutral-grip pulldown',start:30,cue:'Palms facing each other. Easier on the front of the shoulder.'},
+     alts:[{for:'shoulder',gym:1,name:'Neutral-grip pulldown',start:30,cue:'Palms facing each other. Easier on the front of the shoulder.'},
            {for:'home',name:'Band pulldown',unit:'bw',cue:'Anchor a band high on a door. Pull down to your chest, squeeze and return slowly.'}]},
     {id:'ohp',name:'Seated shoulder press',m:['Shoulders','Arms'],sets:3,lo:8,hi:10,rest:75,unit:'kg',start:10,
      cue:'Back against the bench. Press straight up without arching your lower back.',
@@ -305,7 +309,7 @@ const PROGRAM = {
     {id:'deadbug',name:'Dead bug',m:['Core'],sets:2,lo:8,hi:10,rest:30,unit:'bw',each:true,
      cue:'Lower back pressed into the floor. Slowly extend the opposite arm and leg, then return.',
      alts:[{for:'back',name:'Bent-knee dead bug',cue:'Keep the knees bent at 90 degrees and tap the heels to the floor. Shorter lever, less strain.'}]},
-    {id:'pushdown',name:'Triceps pushdown',m:['Arms'],sets:2,lo:10,hi:12,rest:45,unit:'kg',start:15,min:45,
+    {id:'pushdown',gym:1,name:'Triceps pushdown',m:['Arms'],sets:2,lo:10,hi:12,rest:45,unit:'kg',start:15,min:45,
      cue:'Elbows pinned to your sides. Push the handle down until your arms are straight.',
      alts:[{for:'home',name:'Band pushdown',unit:'bw',cue:'Anchor a band high on a door and push down the same way.'}]},
     {id:'sideplank',name:'Side plank',m:['Core'],sets:2,lo:20,hi:30,rest:30,unit:'sec',each:true,min:45,
@@ -314,20 +318,20 @@ const PROGRAM = {
     {id:'tandem',name:'Heel-to-toe walk',m:['Balance'],sets:2,lo:20,hi:20,rest:20,unit:'bw',
      cue:'Walk 20 steps along a line, heel touching toe. Eyes forward, not at your feet. Stay near a wall.',
      alts:[]},
-    {id:'z2',name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
+    {id:'z2',gym:1,name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
      cue:'Bike, rower or a brisk incline walk. Keep a pace where you can still talk in full sentences. Finish with two minutes of slow walking.',
-     alts:[{for:'knee',name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'}]}
+     alts:[{for:'knee',gym:1,name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'},{for:'home',name:'Brisk walk',cue:'Walk outdoors at a pace where you can talk but not sing. Swing your arms. Finish with two minutes of slow walking.'}]}
   ]},
   C:{focus:'Step, push, row, glutes',ex:[
     {id:'stepup',name:'Dumbbell step-up',m:['Quads','Glutes','Balance'],sets:3,lo:8,hi:10,rest:45,unit:'kg',start:10,each:true,
      cue:'Knee-height box. Push through the heel of the top foot. Don’t bounce off the bottom foot.',
-     alts:[{for:'knee',name:'Leg press, short range',start:50,cue:'Stop above 90 degrees. Heavy work for the legs with little knee stress.'}]},
+     alts:[{for:'knee',gym:1,name:'Leg press, short range',start:50,cue:'Stop above 90 degrees. Heavy work for the legs with little knee stress.'}]},
     {id:'pushup',name:'Incline push-up',m:['Chest','Shoulders','Arms','Core'],sets:3,lo:8,hi:12,rest:60,unit:'bw',
      cue:'Hands on a bench or bar, body in one straight line. Use a lower surface as you get stronger.',
      alts:[{for:'shoulder',name:'Band chest press',unit:'bw',cue:'Band anchored behind you, press forward. Stop before the shoulder feels pinched.'}]},
-    {id:'cablerow',name:'Seated cable row',m:['Back','Arms','Shoulders'],sets:3,lo:10,hi:12,rest:60,unit:'kg',start:35,
+    {id:'cablerow',gym:1,name:'Seated cable row',m:['Back','Arms','Shoulders'],sets:3,lo:10,hi:12,rest:60,unit:'kg',start:35,
      cue:'Sit tall. Pull the handle to your stomach and squeeze the shoulder blades together.',
-     alts:[{for:'back',name:'Chest-supported row',start:12,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.'}]},
+     alts:[{for:'home',name:'Band seated row',unit:'bw',cue:'Sit on the floor with your legs straight and a band around your feet. Pull the handles to your stomach and squeeze your shoulder blades together.'},{for:'back',name:'Chest-supported row',start:12,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.'}]},
     {id:'thrust',name:'Hip thrust',m:['Glutes','Hamstrings'],sets:3,lo:10,hi:12,rest:60,unit:'kg',start:20,
      cue:'Upper back on a bench, dumbbell on the hips. Drive up until the hips line up with the knees. Pause one second.',
      alts:[{for:'knee',name:'Glute bridge',start:10,cue:'Same movement from the floor, with less knee bend.'}]},
@@ -337,15 +341,15 @@ const PROGRAM = {
     {id:'lateral',name:'Lateral raise',m:['Shoulders'],sets:2,lo:12,hi:15,rest:45,unit:'kg',start:4,min:45,
      cue:'Light dumbbells. Raise to shoulder height with a slight bend in the elbows, thumbs level.',
      alts:[{for:'shoulder',name:'Partial lateral raise',start:3,cue:'Stop at 45 degrees. All the benefit, less pinching at the top.'}]},
-    {id:'backext',name:'Back extension',m:['Back','Glutes'],sets:2,lo:10,hi:12,rest:45,unit:'bw',min:45,
+    {id:'backext',gym:1,name:'Back extension',m:['Back','Glutes'],sets:2,lo:10,hi:12,rest:45,unit:'bw',min:45,
      cue:'On a 45-degree bench. Lower slowly, rise until your body is in a straight line. Don\u2019t arch past it.',
-     alts:[{for:'back',name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds. Builds the back without load.'}]},
+     alts:[{for:'home',name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds. Builds the back without load.'},{for:'back',name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds. Builds the back without load.'}]},
     {id:'calf',name:'Single-leg calf raise',m:['Calves','Balance'],sets:2,lo:10,hi:12,rest:30,unit:'bw',each:true,
      cue:'Hold a support. Rise up slowly, then take three seconds to lower.',
      alts:[{for:'knee',name:'Two-leg calf raise',cue:'Both feet on the floor, same slow lowering.'}]},
-    {id:'z2',name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
+    {id:'z2',gym:1,name:'Easy cardio',m:['Heart'],sets:1,lo:10,hi:10,rest:0,unit:'min',min:60,
      cue:'Bike, rower or a brisk incline walk. Keep a pace where you can still talk in full sentences. Finish with two minutes of slow walking.',
-     alts:[{for:'knee',name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'}]}
+     alts:[{for:'knee',gym:1,name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'},{for:'home',name:'Brisk walk',cue:'Walk outdoors at a pace where you can talk but not sing. Swing your arms. Finish with two minutes of slow walking.'}]}
   ]}
 };
 const ORDER = ['A','B','C'];
@@ -368,12 +372,12 @@ const state = {
   history:[],
   last:{},
   days:[0,2,4], weekOverride:null, terms:null,
-  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false,
+  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3,
   player:null
 };
 try{if(localStorage.getItem('jarl-welcome')) state.welcome=false}catch(e){}
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
-function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
+function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -389,10 +393,12 @@ function recovery(){
   return {last:l, days, doneToday:days===0, ready:days>=2, next:nextLetter(l.s), nextDate:Math.max(T0,l.d+2*DAY)};
 }
 function resolve(ex){
-  let idx=state.swaps[ex.id], auto=false;
+  let idx=state.swaps[ex.id], auto=false, ck=false;
+  const home=state.equip==='home', sore=(state.player&&state.player.sore)||{}, ok=a=>!(home&&a.gym);
   if(idx===undefined){ idx=-1;
-    for(const j of ['knee','shoulder','back']) if(state.joints[j]){const k=ex.alts.findIndex(a=>a.for===j); if(k>-1){idx=k;auto=true;break;}} }
-  if(idx>-1&&ex.alts[idx]) return {...ex,...ex.alts[idx],alt:true,auto,altFor:ex.alts[idx].for,unit:ex.alts[idx].unit||ex.unit};
+    for(const j of ['knee','shoulder','back']) if(state.joints[j]||sore[j]){const k=ex.alts.findIndex(a=>a.for===j&&ok(a)); if(k>-1){idx=k;auto=true;ck=!state.joints[j];break;}}
+    if(idx===-1&&home&&ex.gym){const k=ex.alts.findIndex(a=>a.for==='home'); if(k>-1){idx=k;auto=true;}} }
+  if(idx>-1&&ex.alts[idx]) return {...ex,...ex.alts[idx],alt:true,auto,ck,altFor:ex.alts[idx].for,unit:ex.alts[idx].unit||ex.unit};
   return {...ex,alt:false};
 }
 const exFor = s=>PROGRAM[s].ex.filter(e=>!e.min||state.length>=e.min);
@@ -409,15 +415,18 @@ function repLabel(ex){
   return `${setsFor(ex)} × ${r}${ex.each?' each':''}`;
 }
 function minutes(s){
-  let t=180;
+  let t=state.warm*60;
   exFor(s).forEach(e=>{const r=resolve(e);if(r.unit==='min'){t+=r.hi*60;return}const work=r.unit==='sec'?(r.hi+10):35;t+=setsFor(r)*((r.each?2:1)*work+restFor(r))});
   return Math.round(t/300)*5;
 }
 function suggest(ex){
-  if(ex.unit==='min') return {w:0,r:ex.hi,text:`Easy pace. Aim for a pulse between ${Math.round(maxHR()*.6)} and ${Math.round(maxHR()*.7)} bpm.`};
+  if(ex.unit==='min') return {w:0,r:ex.hi,text:state.hrMed?'Easy pace: about 4 to 5 out of 10 effort. You should be able to talk in full sentences.':`Easy pace. Aim for a pulse between ${Math.round(maxHR()*.6)} and ${Math.round(maxHR()*.7)} bpm.`};
   const L=state.last[ex.name]; const step=(ex.start||0)>=30?5:2;
   if(!L) return {w:ex.start||0,r:ex.hi,text: ex.unit==='kg'||ex.unit==='m' ? `First time. Start at ${ex.start} kg${ex.unit==='m'?' per hand':''} and pick a weight you could lift 2–3 more times.` : 'First time. Move slowly and stop 2–3 reps short of your limit.'};
   const all=L.r.every(x=>x>=ex.hi); const tot=L.r.reduce((a,b)=>a+b,0);
+  const P=state.player;
+  if((ex.unit==='kg'||ex.unit==='m')&&P&&(P.back||P.deload)){const f=P.back?.85:.8, w=Math.max(step,Math.round(L.w*f/step)*step);
+    return {w,r:ex.lo,text:P.back?`Welcome back. After a break, start at ${w} kg, about 15% lighter than last time, and build up again.`:`Lighter week: ${w} kg, about 20% less than usual. Joints and tendons catch up, and you come back stronger.`};}
   if((ex.unit==='kg'||ex.unit==='m')&&LIGHT) return {w:L.w,r:ex.lo,text:`Light day: stay at ${L.w} kg and stop 2\u20133 reps short. Save the extra weight for your next full training.`};
   if(ex.unit==='kg'||ex.unit==='m'){
     if(all) return {w:L.w+step,r:ex.lo,text:`You hit the top of the range on every set last time. Go up to ${L.w+step} kg.`};
@@ -487,6 +496,8 @@ ANIM['Wall slides']={view:'front',p:{},f:[{hip:[120,87],hr:[22,-20]},{hip:[120,8
 ANIM['Ankle rocks']={f:[{hip:[104,120],t:180,hn:[26,30],hf:[22,32],an:[140,165],af:[72,165]},{hip:[118,122],t:176,hn:[28,30],hf:[24,32],an:[140,165],af:[72,165]}]};
 ANIM['Chin tucks']={p:{lines:[[96,62,96,126],[96,126,128,126],[112,126,112,165]]},f:[{hip:[106,120],t:180,hn:[26,40],an:[146,165],af:[142,165],hd:[10,2]},{hip:[106,120],t:180,hn:[26,40],an:[146,165],af:[142,165],hd:[-6,0]}]};
 ANIM['Hammer curl']=ANIM['Dumbbell biceps curl'];
+ANIM['Band seated row']={...ANIM['Seated cable row'],p:{box:[74,138,36,27],cable:[208,140,1],lines:[[180,165,186,138]]}};
+ANIM['Brisk walk']={p:{},loop:1,f:walk(16,[8,50])};
 ANIM['Neutral-grip pulldown']=ANIM['Lat pulldown'];
 ANIM['Band pulldown']={...ANIM['Lat pulldown'],p:{box:[92,126,34,39],cable:[114,-18,1]}};
 ANIM['Band pushdown']={...ANIM['Triceps pushdown'],p:{cable:[152,-18,1]}};
@@ -637,6 +648,10 @@ function moveTo(from,to){
   const days=weekDays().filter(x=>x!==from); if(!days.includes(to)) days.push(to);
   state.weekOverride={mon:MON,days}; save();
 }
+const mondayOf=t=>t-((new Date(t).getDay()+6)%7)*DAY;
+function isWelcomeBack(){const r=recovery(); return !r.first&&!r.doneToday&&r.days>=10}
+function trainingWeek(){if(!state.history.length) return 1; const f=Math.min(...state.history.map(h=>h.d)); return Math.round((MON-mondayOf(f))/(7*DAY))+1}
+function isDeloadWeek(){return state.history.length>0 && trainingWeek()%6===0}
 function isLightToday(){const r=recovery(); if(r.first||r.doneToday||r.days!==1||!weekPlan().plan.some(p=>p.d===T0)) return false; const y=state.history.find(h=>h.d===T0-DAY); return !!y&&!y.light}
 function viewToday(){LIGHT=isLightToday(); try{return viewTodayInner()} finally{LIGHT=false}}
 function viewTodayInner(){
@@ -663,11 +678,13 @@ function viewTodayInner(){
   }
   const list=exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button>${r.alt?`<span class="pill">${JOINT[r.altFor]}</span>`:''}</div><span class="sr num">${repLabel(r)}</span></li>`}).join('');
   const doneN=wk.done.length;
+  const banner=(isWelcomeBack()&&(today||!upcoming)?`<p class="coach rest"><b>Welcome back.</b> It\u2019s been ${rec.days} days. Your next training starts about 15% lighter, so joints and tendons can catch up.</p>`:'')
+    +(isDeloadWeek()?`<p class="coach rest"><b>Lighter week</b> (week ${trainingWeek()}). Same exercises at about 20% less weight. Every sixth week is lighter, so you keep progressing without wearing down.</p>`:'');
   return `
-  <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}</div>
+  <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}${banner}</div>
   <div class="card stack">
     <div class="row between"><h2>${TN(s)}</h2><span class="row" style="gap:6px">${LIGHT?'<span class="pill rest">Light day</span>':''}<span class="pill plain num">~${minutes(s)} min</span></span></div>
-    <p class="muted small">${PROGRAM[s].focus}. Warm-up first: 3 minutes. Tap an exercise to see how it\u2019s done.</p>
+    <p class="muted small">${PROGRAM[s].focus}. Warm-up first: ${state.warm} minutes. Tap an exercise to see how it\u2019s done.</p>
     <ol class="exlist">${list}</ol>
     ${cta}
   </div>
@@ -895,7 +912,8 @@ function viewProfile(){
     <div class="src"><span><b>Apple Watch</b><br><span class="muted small">Live pulse during sessions, through Apple Health</span></span><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?'Active':'Off'}</span></div>
     <div class="src"><span><b>Garmin watch</b><br><span class="muted small">Turn on Apple Health sync in the Garmin Connect app</span></span><span class="status off">Via Health</span></div>
     <div class="src"><span><b>Chest strap</b><br><span class="muted small">Polar H10 and other Bluetooth straps. Most accurate for strength work</span></span><span class="status off">Coming</span></div>
-    <p class="muted small" style="padding-top:8px">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
+    <label class="switch" for="hrmed" style="border-top:1px solid var(--line)"><span><b>I take medication that lowers my heart rate</b><br><span class="muted small">For example beta-blockers. Jarl then uses breathing and effort instead of pulse zones.</span></span><input type="checkbox" id="hrmed" data-pref="hrMed" ${state.hrMed?'checked':''}></label>
+    ${state.hrMed?'<p class="muted small" style="padding-top:8px">Pulse zones are switched off. Rest until your breathing has settled, and keep cardio at a pace where you can talk.</p>':''}<p class="muted small" style="padding-top:8px;${state.hrMed?'display:none':''}">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
   </div>
   <div class="card stack" id="days"><h3>Training days</h3>
     <div class="daychips" role="group" aria-label="Training days">${DAYNAMES.map((d,i)=>`<button data-act="toggleday" data-i="${i}" aria-pressed="${state.days.includes(i)}">${d}</button>`).join('')}</div>
@@ -903,6 +921,9 @@ function viewProfile(){
     ${state.dayMsg?'<p class="small" style="color:var(--warn)"><b>Six is the maximum.</b> Your body needs at least one full rest day a week. Unselect a day first.</p>':''}
     ${String(state.days.slice().sort())!=='0,2,4'?'<button class="btn link small" style="align-self:flex-start;min-height:36px;padding:0;font-size:.9rem" data-act="defaultdays">Back to the default: Mon, Wed, Fri</button>':''}</div>
   <div class="card stack"><h3>Colours</h3>${seg('scheme',[['fjord','Fjord'],['pine','Pine']])}<p class="muted small">${state.scheme==='fjord'?'Deep fjord blue with brass details.':'Pine green with brass details.'} Dark mode follows your phone.</p></div>
+  <div class="card stack"><h3>Text size</h3>${seg('textSize',[['m','Normal'],['l','Large'],['xl','Extra large']])}<p class="muted small">Larger text is easier to read at arm\u2019s length in the gym.</p></div>
+  <div class="card stack"><h3>Equipment</h3>${seg('equip',[['gym','Gym'],['home','Home']])}<p class="muted small">${state.equip==='home'?'Dumbbells, a bench or sturdy chair, and a resistance band. Machine exercises are swapped for band and dumbbell versions automatically.':'A gym with dumbbells, benches, cables and machines.'}</p></div>
+  <div class="card stack"><h3>Warm-up</h3>${seg('warm',[[3,'3 min'],[5,'5 min']])}<p class="muted small">Five minutes is better on cold mornings or stiff days.</p></div>
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
@@ -913,8 +934,25 @@ function viewProfile(){
 }
 
 /* ---------- Player ---------- */
-function startSession(s){
-  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),light:isLightToday()};
+const TIPS=['Protein helps muscle repair. Include some with every meal: fish, eggs, dairy, beans or meat.',
+ 'Muscle is rebuilt while you sleep. Seven to eight hours makes every training count for more.',
+ 'A 20\u201330 minute walk on rest days speeds recovery and is good for your heart.',
+ 'Drink a glass of water now. The feeling of thirst gets weaker with age.',
+ 'Mild soreness for a day or two is normal. Sharp or joint pain is not: swap that exercise next time.',
+ 'Consistency beats intensity. Two trainings every week for a year beats six a week for a month.',
+ 'Stiff in the morning? The 8-minute mobility routine is a good start to the day.',
+ 'Balance work protects against falls. Try standing on one leg while you brush your teeth.'];
+let CK={};
+function checkinSheet(s){
+  CK={knee:false,shoulder:false,back:false,tired:false};
+  const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="false"><b>${t}</b><span class="muted small">${d}</span></button>`;
+  sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How do you feel today?</h2><p class="muted">Tap anything that\u2019s sore or stiff. Jarl adjusts today\u2019s training only.</p>
+   <div class="ckgrid">${o('knee','Knees','Knee-friendly versions today')}${o('shoulder','Shoulders','Shoulder-friendly versions today')}${o('back','Lower back','Back-friendly versions today')}${o('tired','Tired or slept badly','Light day: two sets per exercise')}</div>
+   <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
+   <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
+}
+function startSession(s,ck={}){
+  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
   $('#player').hidden=false; document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
 }
@@ -923,8 +961,8 @@ function openExInner(i){const P=state.player; P.idx=i; if(i>=0){const r=resolve(
 function renderPlayer(){LIGHT=!!(state.player&&state.player.light); try{renderPlayerInner()} finally{LIGHT=false}}
 function renderPlayerInner(){
   const P=state.player, ex=exFor(P.s);
-  const warm=`<div class="step ${P.idx===-1?'open':'done'}"><button class="head" data-act="open" data-i="-1"><span class="badge">${P.idx===-1?'W':'✓'}</span><span><b>Warm-up</b><br><span class="muted small">3 minutes</span></span><span></span></button>
-    ${P.idx===-1?`<div class="body"><ul class="stack" style="margin:0;padding-left:1.1em">${WARMUP.map(w=>`<li>${w}</li>`).join('')}</ul><button class="btn primary" data-act="warmdone">Warm-up done</button></div>`:''}</div>`;
+  const warm=`<div class="step ${P.idx===-1?'open':'done'}"><button class="head" data-act="open" data-i="-1"><span class="badge">${P.idx===-1?'W':'✓'}</span><span><b>Warm-up</b><br><span class="muted small">${state.warm} minutes</span></span><span></span></button>
+    ${P.idx===-1?`<div class="body"><ul class="stack" style="margin:0;padding-left:1.1em">${(state.warm===5?WARMUP5:WARMUP3).map(w=>`<li>${w}</li>`).join('')}</ul><button class="btn primary" data-act="warmdone">Warm-up done</button></div>`:''}</div>`;
   const items=ex.map((e,i)=>{
     const r=resolve(e), n=setsFor(r), logs=P.logs[e.id]||[], done=logs.length>=n, open=P.idx===i;
     const head=`<button class="head" data-act="open" data-i="${i}" aria-expanded="${open}"><span class="badge">${done?'✓':i+1}</span><span><b>${r.name}</b><br><span class="muted small num">${repLabel(r)}</span></span><span class="muted small num">${logs.length}/${n}</span></button>`;
@@ -937,10 +975,11 @@ function renderPlayerInner(){
     const rBox=r.unit==='m'?`<div class="stepper" style="grid-template-columns:1fr"><span><b class="num">${r.hi} m</b><small>distance</small></span></div>`
       :`<div class="stepper"><button data-act="adj" data-k="r" data-d="-${r.unit==='sec'?5:1}" aria-label="Fewer">−</button><span><b class="num">${c.r}</b><small>${r.unit==='sec'?'seconds':r.unit==='min'?'minutes':'reps'}${r.each?' each':''}</small></span><button data-act="adj" data-k="r" data-d="${r.unit==='sec'?5:1}" aria-label="More">+</button></div>`;
     return `<div class="step open">${head}<div class="body">
-      ${r.alt?`<span class="pill" style="align-self:flex-start">${JOINT[r.altFor]} swap${r.auto?' (from your settings)':''}</span>`:''}
+      ${r.alt?`<span class="pill" style="align-self:flex-start">${JOINT[r.altFor]} swap${r.ck?' (from today\u2019s check-in)':r.auto?(r.altFor==='home'?' (home equipment)':' (from your settings)'):''}</span>`:''}
       ${demoSvg(r.name)}
       <p class="muted small">${r.m.join(' · ')}</p>
       <p>${r.cue}</p>
+      ${(r.unit==='kg'||r.unit==='bw'||r.unit==='m')&&!(r.m.length===1&&r.m[0]==='Balance')?'<p class="small breath"><b>Breathe out as you lift.</b> Don\u2019t hold your breath.</p>':''}
       <p class="hint">${sg.text}</p>
       <div class="sets">${chips}</div>
       ${done?`<p class="muted">All sets done.</p>`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
@@ -950,7 +989,7 @@ function renderPlayerInner(){
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
-   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="close">Close</button></div></div>
+   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="close">Close</button></div></div>
    <div class="pwrap">${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
@@ -964,7 +1003,7 @@ function tick(){
     P.hr=target+(P.hr-target)*Math.exp(-dt/tau)+(Math.random()-.5)*.8; P.hrLog.push(P.hr);
     const c=$('#hrchip'); if(c){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} }
   const hr=Math.round(P.hr), high=on&&P.hr>maxHR()*.85, ready=on&&P.hr<readyHR();
-  const pulseLine=on?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
+  const pulseLine=state.hrMed?'Rest until your breathing has settled.':on?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
   const bar=$('#restbar');
   if(P.rest){const left=(P.rest.end-Date.now())/1000;
     if(left<=0){ if(!P.rest.over){P.rest.over=true; try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
@@ -999,12 +1038,13 @@ function completeSession(effort){
     right:'That’s exactly the zone that builds muscle without wearing you down. Same plan next time.',
     hard:'Next time the weights drop by about 10%. If a joint hurt, use Swap for that exercise. See a doctor if pain lasts more than a few days.'}[effort];
   const hl=P.hrLog, avg=hl.length?Math.round(hl.reduce((a,b)=>a+b,0)/hl.length):0, peak=hl.length?Math.round(Math.max(...hl)):0;
-  const hrLine=state.health.connected&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
+  const hrLine=!state.hrMed&&state.health.connected&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
   const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
   sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
    <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/3</b></div></div>
    ${hrLine}
    <p class="coach">${msg}</p>
+   <p class="hint"><b>Tip:</b> ${TIPS[(state.history.length-1+TIPS.length)%TIPS.length]}</p>
    <p class="coach rest">Tomorrow is a rest day. A 30-minute walk counts. Next training: <b>${fmtDay(nextTraining())}</b>.</p>
    <button class="btn primary" data-act="closesheet">Back to Today</button>`);
   state.tab='today'; render();
@@ -1059,6 +1099,7 @@ function mobTimer(){
 /* ---------- Render & events ---------- */
 function render(){
   document.documentElement.dataset.scheme=state.scheme;
+  document.documentElement.style.fontSize={m:'100%',l:'112.5%',xl:'125%'}[state.textSize]||'100%';
   $('.tabs').hidden=state.welcome;
   setTimeout(()=>mountAnims($('#view')),0);
   if(state.welcome){$('#view').innerHTML=viewWelcome();return}
@@ -1074,7 +1115,9 @@ document.addEventListener('click',ev=>{
   if(t.dataset.seg){state[t.dataset.seg]=isNaN(+t.dataset.v)?t.dataset.v:+t.dataset.v; save(); render(); return}
   const P=state.player, a=t.dataset.act;
   switch(a){
-    case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} startSession(t.dataset.s); break;
+    case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} checkinSheet(t.dataset.s); break;
+    case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k])); break;}
+    case 'ckstart': {const ck=t.dataset.allgood?{}:{...CK}; closeSheet(); startSession(t.dataset.s,ck); break;}
     case 'mobility': mobilitySheet(); break;
     case 'mob': mobilitySheet(+t.dataset.i); break;
     case 'mobtimer': mobTimer(); break;
@@ -1099,7 +1142,7 @@ document.addEventListener('click',ev=>{
     case 'terms-decline': termsClose(); sheet(`<h2>You can look, but not train yet</h2><p>To use Jarl, you need to accept the User Agreement. You can read it any time from the welcome screen or the You tab.</p><button class="btn ghost" data-act="closesheet">OK</button>`); break;
     case 'terms-accept': { if(!$('#terms-check')||!$('#terms-check').checked) break; state.terms={version:TERMS_VERSION,at:Date.now()}; save(); const nx=termsNext; termsClose();
       if(nx==='welcome-go'||nx==='welcome-skip'){ const b=document.createElement('button'); b.dataset.act=nx; b.hidden=true; document.body.appendChild(b); b.click(); b.remove(); }
-      else if(nx&&nx.startsWith('start:')) startSession(nx.slice(6)); else render();
+      else if(nx&&nx.startsWith('start:')) checkinSheet(nx.slice(6)); else render();
       break; }
     case 'move': moveSheet(+t.dataset.i); break;
     case 'movetoday': moveTo(+t.dataset.from,+t.dataset.to); closeSheet(); render(); break;
@@ -1118,6 +1161,7 @@ document.addEventListener('click',ev=>{
   }
 });
 document.addEventListener('change',ev=>{
+  if(ev.target.dataset&&ev.target.dataset.pref){state[ev.target.dataset.pref]=ev.target.checked; save(); render(); return;}
   if(ev.target.id==='terms-check'){const b=$('#terms-accept'); if(b) b.disabled=!ev.target.checked; return;}
   const t=ev.target;
   if(t.dataset.joint){state.joints[t.dataset.joint]=t.checked; Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); save();}
