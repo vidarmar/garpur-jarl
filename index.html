@@ -24,6 +24,7 @@
   --accent:#1F4B6E; --accent-ink:#FFFFFF; --accent-soft:#DAE5EE; --brass:#94692A; --brass-soft:#F0E5D1;
   --rest:#3E6B58; --rest-soft:#DCE9E2; --warn:#A0551C; --warn-soft:#F5E3D3; --alert:#B3261E; --alert-soft:#F8DEDA;
   --far:#A5AFB8; --eq:#B9C2C9; --eqsoft:#E3E8EB;
+  --z1:#8A949C; --z2:#2F7FC1; --z3:#2E9A5B; --z4:#DB8216; --z5:#D23B2E;
   --display:'Archivo','Arial Narrow',Arial,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
   --r:14px;
@@ -34,13 +35,13 @@
   --bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845;
   --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --brass-soft:#33291A;
   --rest:#86BFA3; --rest-soft:#1A2F25; --warn:#E0A060; --warn-soft:#35261A; --alert:#F2A097; --alert-soft:#3A201D;
-  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; color-scheme:dark }
+  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
   :root:not([data-theme="light"])[data-scheme="pine"]{--accent:#72B891; --accent-soft:#1F3328; --accent-ink:#0F1A14;} }
 :root[data-theme="dark"]{
   --bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845;
   --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --brass-soft:#33291A;
   --rest:#86BFA3; --rest-soft:#1A2F25; --warn:#E0A060; --warn-soft:#35261A; --alert:#F2A097; --alert-soft:#3A201D;
-  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; color-scheme:dark }
+  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
 :root[data-theme="dark"][data-scheme="pine"]{--accent:#72B891; --accent-soft:#1F3328; --accent-ink:#0F1A14;}
 
 *{box-sizing:border-box}
@@ -76,6 +77,20 @@ p{margin:0}
 .brand{display:flex;align-items:baseline;gap:10px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .brand b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:1.35rem;letter-spacing:.14em;color:var(--brass)}
 .brand span{font-size:.85rem;color:var(--muted)}
+/* 2.0 */
+.zones{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.zones div{display:flex;flex-direction:column;gap:1px;font-size:.75rem;min-width:0}
+.zones span{height:8px;border-radius:4px}
+.zones b{font-size:.8rem}
+.zones small{color:var(--muted);font-size:.7rem;overflow-wrap:anywhere}
+.bodymap{margin:0;display:flex;flex-direction:column;gap:6px;align-items:center}
+.bodymap svg{width:100%;max-width:300px;height:auto}
+.bodymap figcaption{width:100%;max-width:300px;display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:-4px}
+.maplegend{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.maplegend i{width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block}
+details.map summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.9rem;list-style:none}
+details.map summary::-webkit-details-marker{display:none}
+#player.dark{--bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845; --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --rest-soft:#1A2F25; --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark; background:var(--bg); color:var(--ink)}
 /* 1.7 */
 .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .breath{background:var(--rest-soft);color:var(--ink);border-radius:10px;padding:8px 12px}
@@ -257,7 +272,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='1.9', APP_DATE='6 Oct 2026';
+const APP_VERSION='2.0', APP_DATE='6 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -372,12 +387,12 @@ const state = {
   history:[],
   last:{},
   days:[0,2,4], weekOverride:null, terms:null,
-  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3, units:(()=>{try{return /^en-(US|LR)$/i.test(navigator.language)?'lb':'kg'}catch(e){return 'kg'}})(),
+  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3, workDark:0, units:(()=>{try{return /^en-(US|LR)$/i.test(navigator.language)?'lb':'kg'}catch(e){return 'kg'}})(),
   player:null
 };
 try{if(localStorage.getItem('jarl-welcome')) state.welcome=false}catch(e){}
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
-function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
+function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -614,7 +629,44 @@ function demoSheet(name){
 const HEART='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.2 4.5 6.9 4.5c2 0 3.5 1.1 5.1 3 1.6-1.9 3.1-3 5.1-3 3.7 0 5.8 3.8 4.4 7.2C19.5 16.4 12 21 12 21z"/></svg>';
 const maxHR=()=>Math.round(208-0.7*state.age);   // Tanaka formula, suited to older adults
 const readyHR=()=>Math.round(maxHR()*0.6);
-function zone(hr){const p=hr/maxHR(); if(p<.6) return ['Easy','var(--accent)']; if(p<.75) return ['Moderate','var(--accent)']; if(p<.85) return ['Hard','var(--warn)']; return ['Very hard','var(--alert)'];}
+const MAPGROUPS=['Chest','Back','Shoulders','Arms','Quads','Hamstrings','Glutes','Calves','Core','Grip'];
+function trainingLoad(s){const L={}; exFor(s).forEach(e=>{const r=resolve(e), n=setsFor(r); r.m.forEach((g,k)=>{L[g]=(L[g]||0)+n*(k===0?1:.6)})}); return L}
+function bodyMap(L,label){
+  const mx=Math.max(1,...MAPGROUPS.map(g=>L[g]||0));
+  const f=g=>{const v=(L[g]||0)/mx; return v?`fill="var(--accent)" fill-opacity="${(.3+.7*v).toFixed(2)}"`:'fill="var(--eq)" fill-opacity=".45"'};
+  const base='fill="var(--eqsoft)" stroke="var(--line)" stroke-width="1.2"';
+  const body=x=>`<g transform="translate(${x},0)"><ellipse cx="60" cy="22" rx="13" ry="16" ${base}/><rect x="53" y="34" width="14" height="14" rx="4" ${base}/>
+   <path d="M30,50 Q60,42 90,50 L93,72 Q87,100 85,124 L35,124 Q33,100 27,72 Z" ${base}/><path d="M35,122 L85,122 L89,142 L31,142 Z" ${base}/>
+   <ellipse cx="21" cy="80" rx="8.5" ry="25" ${base}/><ellipse cx="99" cy="80" rx="8.5" ry="25" ${base}/><ellipse cx="17" cy="121" rx="7" ry="20" ${base}/><ellipse cx="103" cy="121" rx="7" ry="20" ${base}/>
+   <circle cx="15" cy="146" r="6" ${base}/><circle cx="105" cy="146" r="6" ${base}/>
+   <ellipse cx="46" cy="170" rx="12.5" ry="32" ${base}/><ellipse cx="74" cy="170" rx="12.5" ry="32" ${base}/><ellipse cx="45" cy="214" rx="8.5" ry="22" ${base}/><ellipse cx="75" cy="214" rx="8.5" ry="22" ${base}/>
+   <ellipse cx="43" cy="238" rx="9" ry="4" ${base}/><ellipse cx="77" cy="238" rx="9" ry="4" ${base}/>`;
+  const front=`${body(0)}
+   <ellipse cx="27" cy="57" rx="10" ry="9" ${f('Shoulders')}/><ellipse cx="93" cy="57" rx="10" ry="9" ${f('Shoulders')}/>
+   <path d="M36,58 Q48,52 59,56 L59,77 Q46,83 36,74 Z" ${f('Chest')}/><path d="M84,58 Q72,52 61,56 L61,77 Q74,83 84,74 Z" ${f('Chest')}/>
+   <ellipse cx="21" cy="84" rx="6.5" ry="15" ${f('Arms')}/><ellipse cx="99" cy="84" rx="6.5" ry="15" ${f('Arms')}/>
+   <ellipse cx="17" cy="119" rx="5.5" ry="15" ${f('Grip')}/><ellipse cx="103" cy="119" rx="5.5" ry="15" ${f('Grip')}/>
+   <rect x="47" y="83" width="26" height="38" rx="6" ${f('Core')}/>
+   <ellipse cx="46" cy="166" rx="10.5" ry="27" ${f('Quads')}/><ellipse cx="74" cy="166" rx="10.5" ry="27" ${f('Quads')}/></g>`;
+  const back=`${body(140)}
+   <path d="M42,50 Q60,44 78,50 L74,65 Q60,71 46,65 Z" ${f('Back')}/>
+   <path d="M38,67 Q47,71 57,73 L57,104 Q46,100 40,92 Z" ${f('Back')}/><path d="M82,67 Q73,71 63,73 L63,104 Q74,100 80,92 Z" ${f('Back')}/>
+   <rect x="51" y="105" width="18" height="17" rx="4" ${f('Back')}/>
+   <ellipse cx="27" cy="57" rx="10" ry="9" ${f('Shoulders')}/><ellipse cx="93" cy="57" rx="10" ry="9" ${f('Shoulders')}/>
+   <ellipse cx="21" cy="84" rx="6.5" ry="15" ${f('Arms')}/><ellipse cx="99" cy="84" rx="6.5" ry="15" ${f('Arms')}/>
+   <ellipse cx="17" cy="119" rx="5.5" ry="15" ${f('Grip')}/><ellipse cx="103" cy="119" rx="5.5" ry="15" ${f('Grip')}/>
+   <ellipse cx="48" cy="134" rx="12" ry="11" ${f('Glutes')}/><ellipse cx="72" cy="134" rx="12" ry="11" ${f('Glutes')}/>
+   <ellipse cx="46" cy="174" rx="10" ry="24" ${f('Hamstrings')}/><ellipse cx="74" cy="174" rx="10" ry="24" ${f('Hamstrings')}/>
+   <ellipse cx="45" cy="209" rx="7.5" ry="15" ${f('Calves')}/><ellipse cx="75" cy="209" rx="7.5" ry="15" ${f('Calves')}/></g>`;
+  const extras=['Balance','Heart'].filter(g=>L[g]).map(g=>`<span class="pill plain">+ ${g==='Heart'?'Heart (cardio)':g}</span>`).join(' ');
+  const names=MAPGROUPS.filter(g=>L[g]).join(', ');
+  return `<figure class="bodymap"><svg viewBox="0 0 260 246" role="img" aria-label="${label||'Muscles trained'}: ${names}">${front}${back.replace('<g transform="translate(140,0)">','<g transform="translate(140,0)">')}</svg>
+   <figcaption><span>Front</span><span>Back</span></figcaption>
+   <div class="row" style="justify-content:center;flex-wrap:wrap;gap:6px"><span class="maplegend"><i></i>Worked more</span><span class="maplegend"><i style="opacity:.4"></i>Worked less</span>${extras}</div></figure>`;
+}
+const ZONES=[['Zone 1','Very light',.5,.6],['Zone 2','Light',.6,.7],['Zone 3','Moderate',.7,.8],['Zone 4','Hard',.8,.9],['Zone 5','Maximum',.9,1]];
+function zone(hr){const p=hr/maxHR(), i=p<.6?0:p<.7?1:p<.8?2:p<.9?3:4; return [`Z${i+1} ${ZONES[i][1]}`,`var(--z${i+1})`,i];}
+function zoneLegend(){const m=maxHR(); return `<div class="zones" aria-label="Heart-rate zones">${ZONES.map((z,i)=>`<div><span style="background:var(--z${i+1})"></span><b>${z[0].replace('Zone ','Z')}</b><small class="num">${Math.round(m*z[2])}\u2013${Math.round(m*z[3])}</small><small>${z[1]}</small></div>`).join('')}</div>`}
 function connectSheet(){
   sheet(`<span class="eyebrow">Apple Health</span><h2>Let Jarl read your heart data</h2>
    <p>Jarl reads these from Apple Health. Your Apple Watch, Garmin or chest strap already writes them there.</p>
@@ -690,6 +742,7 @@ function viewTodayInner(){
   <div class="card stack">
     <div class="row between"><h2>${TN(s)}</h2><span class="row" style="gap:6px">${LIGHT?'<span class="pill rest">Light day</span>':''}<span class="pill plain num">~${minutes(s)} min</span></span></div>
     <p class="muted small">${PROGRAM[s].focus}. Warm-up first: ${state.warm} minutes. Tap an exercise to see how it\u2019s done.</p>
+    <details class="map"><summary>Show the muscles this works</summary>${bodyMap(trainingLoad(s),TN(s))}</details>
     <ol class="exlist">${list}</ol>
     ${cta}
   </div>
@@ -827,7 +880,7 @@ function viewWelcome(){
 }
 function viewProgram(){
   const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
-  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p><ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
+  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
   return `
   <div class="stack"><span class="eyebrow">Your program</span><h1>Three full-body sessions a week</h1>
   <p>Every session trains the whole body, so missing one day never leaves a muscle group behind. Keep at least one rest day between sessions.</p></div>
@@ -838,8 +891,6 @@ function viewProgram(){
       <li>Every sixth week is lighter: same exercises, about 20% less weight. Joints and tendons catch up.</li>
       <li>Each session ends with balance work. It’s the best protection against falls.</li>
     </ol></div>
-  <div class="stack"><h3>What each session trains</h3>
-    <div class="tblwrap card" style="padding:6px 14px"><table class="cov"><thead><tr><th scope="col">Muscle group</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead><tbody>${cov}</tbody></table></div></div>
   ${sessions}`;
 }
 function spark(vals,{w=320,h=90,fmt=v=>v,color='var(--accent)'}={}){
@@ -868,6 +919,10 @@ function viewProgress(){
   <div class="stack"><span class="eyebrow">Progress · last 12 weeks</span><h1>Three numbers that matter</h1>
   <p>Fitness, heart and habit. Compared with men your age and with your own past, never with 25-year-olds.</p>
   <span class="pill warn" style="align-self:flex-start">Example data. The iPhone app reads these from Apple Health.</span></div>
+  ${(()=>{const wk=weekPlan(), done=wk.done, L={}, src=done.length?done:wk.plan; src.forEach(h=>{const t=trainingLoad(h.s); for(const g in t) L[g]=(L[g]||0)+t[g]});
+    return `<div class="card stack"><div class="row between"><h2>Muscles this week</h2><span class="pill ${done.length?'':'plain'}">${done.length?`${done.length} training${done.length>1?'s':''} done`:'Planned'}</span></div>
+    ${src.length?bodyMap(L,'Muscles this week'):'<p class="muted">No trainings planned this week.</p>'}
+    <p class="muted small">${done.length?'Darker areas got more work. Every muscle group should show some colour by the end of the week.':'Nothing logged yet this week. This shows what your planned trainings will work.'}</p></div>`})()}
   <div class="card stack">
     <div class="row between"><h2>VO₂ max</h2><span class="pill">${bands[bi][0]} for men 50–59</span></div>
     <div class="row" style="align-items:baseline"><span class="bigval num">36.2</span><span class="muted">ml/kg/min</span></div>
@@ -919,7 +974,7 @@ function viewProfile(){
     <div class="src"><span><b>Garmin watch</b><br><span class="muted small">Turn on Apple Health sync in the Garmin Connect app</span></span><span class="status off">Via Health</span></div>
     <div class="src"><span><b>Chest strap</b><br><span class="muted small">Polar H10 and other Bluetooth straps. Most accurate for strength work</span></span><span class="status off">Coming</span></div>
     <label class="switch" for="hrmed" style="border-top:1px solid var(--line)"><span><b>I take medication that lowers my heart rate</b><br><span class="muted small">For example beta-blockers. Jarl then uses breathing and effort instead of pulse zones.</span></span><input type="checkbox" id="hrmed" data-pref="hrMed" ${state.hrMed?'checked':''}></label>
-    ${state.hrMed?'<p class="muted small" style="padding-top:8px">Pulse zones are switched off. Rest until your breathing has settled, and keep cardio at a pace where you can talk.</p>':''}<p class="muted small" style="padding-top:8px;${state.hrMed?'display:none':''}">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
+    ${state.hrMed?'<p class="muted small" style="padding-top:8px">Pulse zones are switched off. Rest until your breathing has settled, and keep cardio at a pace where you can talk.</p>':''}${state.hrMed?'':`<div style="padding-top:10px">${zoneLegend()}</div>`}<p class="muted small" style="padding-top:8px;${state.hrMed?'display:none':''}">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
   </div>
   <div class="card stack" id="days"><h3>Training days</h3>
     <div class="daychips" role="group" aria-label="Training days">${DAYNAMES.map((d,i)=>`<button data-act="toggleday" data-i="${i}" aria-pressed="${state.days.includes(i)}">${d}</button>`).join('')}</div>
@@ -927,6 +982,7 @@ function viewProfile(){
     ${state.dayMsg?'<p class="small" style="color:var(--warn)"><b>Six is the maximum.</b> Your body needs at least one full rest day a week. Unselect a day first.</p>':''}
     ${String(state.days.slice().sort())!=='0,2,4'?'<button class="btn link small" style="align-self:flex-start;min-height:36px;padding:0;font-size:.9rem" data-act="defaultdays">Back to the default: Mon, Wed, Fri</button>':''}</div>
   <div class="card stack"><h3>Colours</h3>${seg('scheme',[['fjord','Fjord'],['pine','Pine']])}<p class="muted small">${state.scheme==='fjord'?'Deep fjord blue with brass details.':'Pine green with brass details.'} Dark mode follows your phone.</p></div>
+  <div class="card stack"><h3>Workout screen</h3>${seg('workDark',[['0','Light'],['1','Dark']])}<p class="muted small">A dark workout screen is easier on the eyes in a dim gym and saves battery. Planning screens stay light.</p></div>
   <div class="card stack"><h3>Text size</h3>${seg('textSize',[['m','Normal'],['l','Large'],['xl','Extra large']])}<p class="muted small">Larger text is easier to read at arm\u2019s length in the gym.</p></div>
   <div class="card stack"><h3>Equipment</h3>${seg('equip',[['gym','Gym'],['home','Home']])}<p class="muted small">${state.equip==='home'?'Dumbbells, a bench or sturdy chair, and a resistance band. Machine exercises are swapped for band and dumbbell versions automatically.':'A gym with dumbbells, benches, cables and machines.'}</p></div>
   <div class="card stack"><h3>Warm-up</h3>${seg('warm',[[3,'3 min'],[5,'5 min']])}<p class="muted small">Five minutes is better on cold mornings or stiff days.</p></div>
@@ -959,7 +1015,7 @@ function checkinSheet(s){
 }
 function startSession(s,ck={}){
   state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
-  $('#player').hidden=false; document.body.style.overflow='hidden'; renderPlayer();
+  $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
 }
 function openEx(i){LIGHT=!!(state.player&&state.player.light); try{openExInner(i)} finally{LIGHT=false}}
