@@ -254,7 +254,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='1.5', APP_DATE='6 Oct 2026';
+const APP_VERSION='1.6', APP_DATE='6 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -365,15 +365,8 @@ const state = {
   tab:'today', age:56, length:30, notify:'train',
   joints:{knee:false,shoulder:false,back:false},
   swaps:{},
-  history:[{d:T0-11*DAY,s:'A'},{d:T0-9*DAY,s:'B'},{d:T0-7*DAY,s:'C'},{d:T0-4*DAY,s:'A'},{d:T0-2*DAY,s:'B'}],
-  last:{
-    'Goblet squat':{w:18,r:[10,10,10]},'Dumbbell bench press':{w:16,r:[10,9,8]},'One-arm dumbbell row':{w:20,r:[12,12,11]},
-    'Farmer carry':{w:22,r:[30,30,30]},'Single-leg stand':{r:[30,28]},
-    'Romanian deadlift':{w:18,r:[10,10,10]},'Lat pulldown':{w:40,r:[12,11,10]},'Seated shoulder press':{w:10,r:[10,10,9]},
-    'Split squat':{w:10,r:[10,9,9]},'Dead bug':{r:[10,10]},'Heel-to-toe walk':{r:[20,20]},
-    'Dumbbell step-up':{w:10,r:[10,10,10]},'Incline push-up':{r:[12,11,10]},'Seated cable row':{w:40,r:[12,12,12]},
-    'Hip thrust':{w:24,r:[12,11,11]},'Pallof press':{r:[10,10]},'Single-leg calf raise':{r:[12,11]}
-  },
+  history:[],
+  last:{},
   days:[0,2,4], weekOverride:null, terms:null,
   health:{connected:false}, scheme:'fjord', welcome:true, onboard:false,
   player:null
@@ -391,6 +384,7 @@ const DAYNAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const nextLetter = s=>ORDER[(ORDER.indexOf(s)+1)%3];
 const lastSession = ()=>state.history.reduce((a,b)=>b.d>a.d?b:a,state.history[0]);
 function recovery(){
+  if(!state.history.length) return {last:null, days:99, doneToday:false, ready:true, next:'A', nextDate:T0, first:true};
   const l=lastSession(); const days=Math.round((T0-l.d)/DAY);
   return {last:l, days, doneToday:days===0, ready:days>=2, next:nextLetter(l.s), nextDate:Math.max(T0,l.d+2*DAY)};
 }
@@ -628,7 +622,7 @@ function nextTraining(){const p=weekPlan().plan.find(x=>x.d>T0||(x.d===T0&&!reco
 function dayAdvice(){
   const n=state.days.length, b2b=consecutive(state.days);
   const lead={2:'<b>2 days a week.</b> Enough to keep your muscle.',3:'<b>3 days a week.</b> Recommended: builds muscle with a rest day between each training.'}[n]||`<b>${n} days a week.</b> Trainings 1, 2 and 3 repeat in order.`;
-  const tail=b2b?' When a training falls the day after another, it becomes a <b>light day</b> automatically: two sets per exercise.':(n<=3?' A rest day between each is ideal.':'');
+  const tail=b2b?' When trainings fall on back-to-back days, every second one becomes a <b>light day</b> automatically: two sets per exercise at the same weights.':(n<=3?' A rest day between each is ideal.':'');
   return `<p class="muted small">${lead}${tail} Pick 2 to 6 days. You can still move a single training on the Today screen.</p>`;
 }
 function consecutive(days){const d=days.slice().sort((a,b)=>a-b); return d.some((x,k)=>d.includes((x+1)%7))}
@@ -643,7 +637,7 @@ function moveTo(from,to){
   const days=weekDays().filter(x=>x!==from); if(!days.includes(to)) days.push(to);
   state.weekOverride={mon:MON,days}; save();
 }
-function isLightToday(){const r=recovery(); return !r.doneToday && r.days<2 && weekPlan().plan.some(p=>p.d===T0)}
+function isLightToday(){const r=recovery(); if(r.first||r.doneToday||r.days!==1||!weekPlan().plan.some(p=>p.d===T0)) return false; const y=state.history.find(h=>h.d===T0-DAY); return !!y&&!y.light}
 function viewToday(){LIGHT=isLightToday(); try{return viewTodayInner()} finally{LIGHT=false}}
 function viewTodayInner(){
   const rec=recovery(), wk=weekPlan(), today=wk.plan.find(p=>p.d===T0), upcoming=wk.plan.find(p=>p.d>T0), s=today?today.s:rec.next;
@@ -657,8 +651,10 @@ function viewTodayInner(){
     head=`${TN(rec.last.s)} done`; coach=`<p class="coach rest">Good work. Your muscles rebuild over the next 48 hours. ${nextTxt}</p>`;
   } else if(today){
     head=`${TN(s)} is today`;
-    coach=rec.days>=2?`<p class="coach">${rec.days} days since your last training, so you\u2019ve recovered. About ${minutes(s)} minutes. Stop each set with 1\u20132 reps left in the tank.</p>`
-      :`<p class="coach rest">You also trained yesterday, so today is a <b>light day</b>: two sets per exercise at last time\u2019s weights. About ${minutes(s)} minutes. Or move it to a later day.</p>`;
+    coach=rec.first?`<p class="coach">Your first training. About ${minutes(s)} minutes. Pick weights you could lift 2\u20133 more times and focus on good form. The app learns your weights from here.</p>`
+      :LIGHT?`<p class="coach rest">You trained yesterday, so today is a <b>light day</b>: two sets per exercise at last time\u2019s weights. About ${minutes(s)} minutes. Or move it to a later day.</p>`
+      :rec.days>=2?`<p class="coach">${rec.days} days since your last training, so you\u2019ve recovered. About ${minutes(s)} minutes. Stop each set with 1\u20132 reps left in the tank.</p>`
+      :`<p class="coach">Yesterday was a light day, so today is a full training. About ${minutes(s)} minutes. Stop each set with 1\u20132 reps left in the tank.</p>`;
     cta=`<button class="btn primary" data-act="start" data-s="${s}">Start ${TN(s)}</button>`;
   } else {
     head='Rest day';
@@ -911,6 +907,7 @@ function viewProfile(){
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
   <div class="card stack"><h3>User Agreement</h3><p class="muted small">${termsOk()?`Version ${state.terms.version}, accepted on ${fmtDay(state.terms.at,{day:'numeric',month:'long',year:'numeric'})}.`:'Not yet accepted. You\u2019ll be asked before your first training.'}</p><button class="btn ghost" data-act="terms-view">Read the User Agreement</button></div>
+  <button class="btn ghost" style="color:var(--alert)" data-act="reset">${state.resetArm?'Tap again to erase all data':'Reset the app'}</button>
   <p class="note">Jarl is a training guide, not medical advice. If you have heart problems, high blood pressure or recent surgery, check with your doctor before you start. Stop any exercise that causes sharp pain.</p>
   <p class="muted small num" style="text-align:center">Version ${APP_VERSION} \u00b7 ${APP_DATE} \u00b7 <button class="btn link small" style="min-height:0;padding:0;font-size:inherit" data-act="terms-view">User Agreement</button></p>`;
 }
@@ -996,7 +993,7 @@ function finishFlow(){
 function completeSession(effort){
   const P=state.player, ex=exFor(P.s); let sets=0;
   ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r)};}});
-  state.history=state.history.filter(h=>h.d!==T0); state.history.push({d:T0,s:P.s}); save();
+  state.history=state.history.filter(h=>h.d!==T0); state.history.push({d:T0,s:P.s,light:!!P.light}); save();
   const mins=Math.max(1,Math.round((Date.now()-P.t0)/60000));
   const msg={easy:'Next time the weights go up on the lifts where you hit the top of the range.',
     right:'That’s exactly the zone that builds muscle without wearing you down. Same plan next time.',
@@ -1097,6 +1094,7 @@ document.addEventListener('click',ev=>{
     case 'closesheet': closeSheet(); break;
     case 'connect': connectSheet(); break;
     case 'terms-view': termsOpen(null); break;
+    case 'reset': if(!state.resetArm){state.resetArm=true; render(); setTimeout(()=>{state.resetArm=false},5000); break;} try{localStorage.removeItem('jarl-v1');localStorage.removeItem('jarl-welcome')}catch(e){} location.reload(); break;
     case 'terms-close': termsClose(); break;
     case 'terms-decline': termsClose(); sheet(`<h2>You can look, but not train yet</h2><p>To use Jarl, you need to accept the User Agreement. You can read it any time from the welcome screen or the You tab.</p><button class="btn ghost" data-act="closesheet">OK</button>`); break;
     case 'terms-accept': { if(!$('#terms-check')||!$('#terms-check').checked) break; state.terms={version:TERMS_VERSION,at:Date.now()}; save(); const nx=termsNext; termsClose();
