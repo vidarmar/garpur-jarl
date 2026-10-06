@@ -257,7 +257,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='1.7', APP_DATE='6 Oct 2026';
+const APP_VERSION='1.9', APP_DATE='6 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -372,12 +372,12 @@ const state = {
   history:[],
   last:{},
   days:[0,2,4], weekOverride:null, terms:null,
-  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3,
+  health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3, units:(()=>{try{return /^en-(US|LR)$/i.test(navigator.language)?'lb':'kg'}catch(e){return 'kg'}})(),
   player:null
 };
 try{if(localStorage.getItem('jarl-welcome')) state.welcome=false}catch(e){}
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
-function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
+function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -419,18 +419,23 @@ function minutes(s){
   exFor(s).forEach(e=>{const r=resolve(e);if(r.unit==='min'){t+=r.hi*60;return}const work=r.unit==='sec'?(r.hi+10):35;t+=setsFor(r)*((r.each?2:1)*work+restFor(r))});
   return Math.round(t/300)*5;
 }
+const U=()=>state.units;
+const stepFor=(ex,u=U())=>u==='lb'?((ex.start||0)>=30?10:5):((ex.start||0)>=30?5:2);
+function convW(w,from,to,step){ if(!w||from===to) return w; const v=from==='kg'?w*2.20462:w/2.20462; return Math.max(step,Math.round(v/step)*step); }
+const fmtKg=kg=>U()==='lb'?`${Math.round(kg*2.20462/5)*5} lb`:`${kg} kg`;
 function suggest(ex){
   if(ex.unit==='min') return {w:0,r:ex.hi,text:state.hrMed?'Easy pace: about 4 to 5 out of 10 effort. You should be able to talk in full sentences.':`Easy pace. Aim for a pulse between ${Math.round(maxHR()*.6)} and ${Math.round(maxHR()*.7)} bpm.`};
-  const L=state.last[ex.name]; const step=(ex.start||0)>=30?5:2;
-  if(!L) return {w:ex.start||0,r:ex.hi,text: ex.unit==='kg'||ex.unit==='m' ? `First time. Start at ${ex.start} kg${ex.unit==='m'?' per hand':''} and pick a weight you could lift 2–3 more times.` : 'First time. Move slowly and stop 2–3 reps short of your limit.'};
+  const L0=state.last[ex.name], step=stepFor(ex), u=U(), st=convW(ex.start||0,'kg',u,step);
+  const L=L0&&{...L0,w:convW(L0.w,L0.u||'kg',u,step)};
+  if(!L) return {w:st,r:ex.hi,text: ex.unit==='kg'||ex.unit==='m' ? `First time. Start at ${st} ${u}${ex.unit==='m'?' per hand':''} and pick a weight you could lift 2–3 more times.` : 'First time. Move slowly and stop 2–3 reps short of your limit.'};
   const all=L.r.every(x=>x>=ex.hi); const tot=L.r.reduce((a,b)=>a+b,0);
   const P=state.player;
   if((ex.unit==='kg'||ex.unit==='m')&&P&&(P.back||P.deload)){const f=P.back?.85:.8, w=Math.max(step,Math.round(L.w*f/step)*step);
-    return {w,r:ex.lo,text:P.back?`Welcome back. After a break, start at ${w} kg, about 15% lighter than last time, and build up again.`:`Lighter week: ${w} kg, about 20% less than usual. Joints and tendons catch up, and you come back stronger.`};}
-  if((ex.unit==='kg'||ex.unit==='m')&&LIGHT) return {w:L.w,r:ex.lo,text:`Light day: stay at ${L.w} kg and stop 2\u20133 reps short. Save the extra weight for your next full training.`};
+    return {w,r:ex.lo,text:P.back?`Welcome back. After a break, start at ${w} ${u}, about 15% lighter than last time, and build up again.`:`Lighter week: ${w} ${u}, about 20% less than usual. Joints and tendons catch up, and you come back stronger.`};}
+  if((ex.unit==='kg'||ex.unit==='m')&&LIGHT) return {w:L.w,r:ex.lo,text:`Light day: stay at ${L.w} ${u} and stop 2\u20133 reps short. Save the extra weight for your next full training.`};
   if(ex.unit==='kg'||ex.unit==='m'){
-    if(all) return {w:L.w+step,r:ex.lo,text:`You hit the top of the range on every set last time. Go up to ${L.w+step} kg.`};
-    return {w:L.w,r:ex.hi,text:`Stay at ${L.w} kg. Last time: ${L.r.join(', ')}. Try to beat ${tot} reps in total.`};
+    if(all) return {w:L.w+step,r:ex.lo,text:`You hit the top of the range on every set last time. Go up to ${L.w+step} ${u}.`};
+    return {w:L.w,r:ex.hi,text:`Stay at ${L.w} ${u}. Last time: ${L.r.join(', ')}. Try to beat ${tot} reps in total.`};
   }
   if(ex.unit==='sec') return {w:0,r:ex.hi,text:`Last time: ${L.r.join(' s, ')} s. ${all?'You held the full 30 s. Try it with eyes closed.':'Aim for 30 s on each leg.'}`};
   return {w:0,r:ex.hi,text:`Last time: ${L.r.join(', ')}. ${all?'Top of the range. Make it slightly harder next time.':'Beat one set by a single rep.'}`};
@@ -858,7 +863,7 @@ function viewProgress(){
   const bands=[['Low',31],['Fair',35],['Good',39],['V. good',44],['Top',99]]; const cur=36.2; const bi=bands.findIndex(b=>cur<b[1]);
   const bw=320,bh=110,bx=i=>14+i*38;
   const bars=wks.map((v,i)=>`<rect x="${bx(i)}" y="${bh-18-v*26}" width="26" height="${v*26}" rx="4" fill="var(--accent)" opacity="${i===wks.length-1?1:.55}"/><text x="${bx(i)+13}" y="${bh-4}" font-size="11" text-anchor="middle" fill="var(--muted)">${i-7===0?'Now':i-7}</text>`).join('');
-  const lifts=[['Goblet squat','12 kg','18 kg'],['Dumbbell bench press','10 kg','16 kg'],['One-arm row','14 kg','20 kg'],['Romanian deadlift','12 kg','18 kg'],['Single-leg stand','15 s','30 s']];
+  const lifts=[['Goblet squat',fmtKg(12),fmtKg(18)],['Dumbbell bench press',fmtKg(10),fmtKg(16)],['One-arm row',fmtKg(14),fmtKg(20)],['Romanian deadlift',fmtKg(12),fmtKg(18)],['Single-leg stand','15 s','30 s']];
   return `
   <div class="stack"><span class="eyebrow">Progress · last 12 weeks</span><h1>Three numbers that matter</h1>
   <p>Fitness, heart and habit. Compared with men your age and with your own past, never with 25-year-olds.</p>
@@ -901,6 +906,7 @@ function viewProfile(){
   <div class="stack"><span class="eyebrow">${state.onboard?'Before you start':'You'}</span><h1>Set it up for your body</h1>
   <p>Tell the app what bothers you. It swaps in joint-friendly exercises automatically. You can still change any exercise during a session.</p></div>
   <div class="card"><div class="field"><label for="age"><b>Age</b><br><span class="muted small">Used for age-group comparisons</span></label><input id="age" type="number" inputmode="numeric" min="40" max="90" value="${state.age}"></div></div>
+  <div class="card stack"><h3>Weight unit</h3>${seg('units',[['kg','Kilograms (kg)'],['lb','Pounds (lb)']])}<p class="muted small">${U()==='lb'?'Dumbbells go up in 5 lb steps, machines in 10 lb steps.':'Dumbbells go up in 2 kg steps, machines in 5 kg steps.'} Weights you\u2019ve already logged are converted.</p></div>
   <div class="card"><h3 style="margin-bottom:4px">Joints to protect</h3>
     ${sw('knee','Knees','Box squats, step-ups and bridges instead of deep knee bends')}
     ${sw('shoulder','Shoulders','Neutral grips and gentler pressing angles')}
@@ -969,9 +975,9 @@ function renderPlayerInner(){
     if(!open) return `<div class="step ${done?'done':''}">${head}</div>`;
     const sg=suggest(r), c=P.cur;
     const chips=[...Array(n)].map((_,k)=>{const L=logs[k]; if(!L) return `<span class="setchip todo">Set ${k+1}</span>`;
-      return `<span class="setchip num">${r.unit==='kg'||r.unit==='m'?L.w+' kg × ':''}${L.r}${r.unit==='sec'?' s':r.unit==='m'?' m':r.unit==='min'?' min':''} ✓</span>`}).join('');
-    const wStep=(r.start||0)>=30?5:2;
-    const wBox=(r.unit==='kg'||r.unit==='m')?`<div class="stepper"><button data-act="adj" data-k="w" data-d="-${wStep}" aria-label="Less weight">−</button><span><b class="num">${c.w}</b><small>kg${r.unit==='m'?' per hand':''}</small></span><button data-act="adj" data-k="w" data-d="${wStep}" aria-label="More weight">+</button></div>`:'';
+      return `<span class="setchip num">${r.unit==='kg'||r.unit==='m'?L.w+' '+U()+' × ':''}${L.r}${r.unit==='sec'?' s':r.unit==='m'?' m':r.unit==='min'?' min':''} ✓</span>`}).join('');
+    const wStep=stepFor(r);
+    const wBox=(r.unit==='kg'||r.unit==='m')?`<div class="stepper"><button data-act="adj" data-k="w" data-d="-${wStep}" aria-label="Less weight">−</button><span><b class="num">${c.w}</b><small>${U()}${r.unit==='m'?' per hand':''}</small></span><button data-act="adj" data-k="w" data-d="${wStep}" aria-label="More weight">+</button></div>`:'';
     const rBox=r.unit==='m'?`<div class="stepper" style="grid-template-columns:1fr"><span><b class="num">${r.hi} m</b><small>distance</small></span></div>`
       :`<div class="stepper"><button data-act="adj" data-k="r" data-d="-${r.unit==='sec'?5:1}" aria-label="Fewer">−</button><span><b class="num">${c.r}</b><small>${r.unit==='sec'?'seconds':r.unit==='min'?'minutes':'reps'}${r.each?' each':''}</small></span><button data-act="adj" data-k="r" data-d="${r.unit==='sec'?5:1}" aria-label="More">+</button></div>`;
     return `<div class="step open">${head}<div class="body">
@@ -989,7 +995,7 @@ function renderPlayerInner(){
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
-   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="close">Close</button></div></div>
+   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
    <div class="pwrap">${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
@@ -1031,7 +1037,7 @@ function finishFlow(){
 }
 function completeSession(effort){
   const P=state.player, ex=exFor(P.s); let sets=0;
-  ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r)};}});
+  ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r),u:U()};}});
   state.history=state.history.filter(h=>h.d!==T0); state.history.push({d:T0,s:P.s,light:!!P.light}); save();
   const mins=Math.max(1,Math.round((Date.now()-P.t0)/60000));
   const msg={easy:'Next time the weights go up on the lifts where you hit the top of the range.',
@@ -1075,7 +1081,8 @@ function mobilitySheet(i=-1){
     return;
   }
   const m=MOBILITY[i], last=i===MOBILITY.length-1, steps=m.cue.split(/(?<=\.)\s+/);
-  sheet(`<div class="row between"><span class="eyebrow">Move ${i+1} of ${MOBILITY.length}</span><span class="pill plain">${m.dose}</span></div>
+  sheet(`<div class="row between"><span class="eyebrow">Move ${i+1} of ${MOBILITY.length}</span><button class="btn ghost" style="width:auto;min-height:40px;padding:0 14px" data-act="mobask" data-i="${i}">Close</button></div>
+   <span class="pill plain" style="align-self:flex-start">${m.dose}</span>
    <h2>${m.name}</h2>
    ${demoSvg(m.name)}
    <ol class="steps">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>
@@ -1121,6 +1128,10 @@ document.addEventListener('click',ev=>{
     case 'mobility': mobilitySheet(); break;
     case 'mob': mobilitySheet(+t.dataset.i); break;
     case 'mobtimer': mobTimer(); break;
+    case 'mobask': mobStop(); sheet(`<h2>Stop the mobility routine?</h2><p>Are you sure you want to stop and return to the home screen? You\u2019re on move ${+t.dataset.i+1} of ${MOBILITY.length}.</p>
+       <button class="btn primary" data-act="mob" data-i="${t.dataset.i}">Keep going</button>
+       <button class="btn ghost" style="color:var(--alert)" data-act="mobquit">Yes, stop and go home</button>`); break;
+    case 'mobquit': closeSheet(); state.tab='today'; render(); window.scrollTo(0,0); break;
     case 'mobdone': mobStop(); sheet(`<span class="eyebrow">Rest-day routine</span><h2>Done. That\u2019s your mobility for today.</h2><p class="coach rest">Loose hips and a mobile upper back make every lift safer. Next training: <b>${fmtDay(nextTraining())}</b>.</p><button class="btn primary" data-act="closesheet">Close</button>`); break;
     case 'open': openEx(+t.dataset.i); break;
     case 'warmdone': openEx(0); break;
@@ -1131,6 +1142,11 @@ document.addEventListener('click',ev=>{
     case 'pick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.swaps[e.id]=+t.dataset.a; save(); closeSheet(); if(P){openEx(+t.dataset.i)} else render(); break;}
     case 'restadd': P.rest.end+=15e3; P.rest.total+=15; tick(); break;
     case 'restskip': P.rest=null; tick(); break;
+    case 'askclose': {const n=Object.values(state.player.logs).reduce((a,l)=>a+l.length,0);
+      sheet(`<h2>Stop this training?</h2><p>Are you sure you want to stop and return to the home screen?</p><p class="muted">${n?`You\u2019ve logged ${n} set${n>1?'s':''}. ${n>1?'They':'It'} won\u2019t count as a completed training, and the training stays planned for today.`:'Nothing has been logged yet. The training stays planned for today.'} To save what you\u2019ve done, tap <b>Finish early</b> at the bottom instead.</p>
+       <button class="btn primary" data-act="closesheet">Keep training</button>
+       <button class="btn ghost" style="color:var(--alert)" data-act="stopconfirm">Yes, stop and go home</button>`); break;}
+    case 'stopconfirm': closeSheet(); closePlayer(); state.tab='today'; render(); window.scrollTo(0,0); break;
     case 'close': closePlayer(); break;
     case 'finish': finishFlow(); break;
     case 'effort': closeSheet(); completeSession(t.dataset.v); break;
