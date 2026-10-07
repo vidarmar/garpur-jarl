@@ -13,9 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Jarl: Strength after 50</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="fonts.css">
 <style>
 /* Layout: one phone-width column, calm stone surfaces, bottom tab bar; the workout player opens full-screen over it */
 :root{
@@ -272,7 +270,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.0', APP_DATE='6 Oct 2026';
+const APP_VERSION='2.2', APP_DATE='7 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -386,13 +384,31 @@ const state = {
   swaps:{},
   history:[],
   last:{},
+  first:{},
   days:[0,2,4], weekOverride:null, terms:null,
   health:{connected:false}, scheme:'fjord', welcome:true, onboard:false, hrMed:false, textSize:'m', equip:'gym', warm:3, workDark:0, units:(()=>{try{return /^en-(US|LR)$/i.test(navigator.language)?'lb':'kg'}catch(e){return 'kg'}})(),
   player:null
 };
 try{if(localStorage.getItem('jarl-welcome')) state.welcome=false}catch(e){}
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last);}}catch(e){}
-function save(){try{localStorage.setItem('jarl-v1',JSON.stringify({workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}))}catch(e){}}
+/* ---------- Native bridge (iPhone app) ---------- */
+const CAP=window.Capacitor, NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform());
+const nat=(plugin,method,opts)=>NATIVE?CAP.nativePromise(plugin,method,opts||{}):Promise.reject(new Error('Only in the iPhone app'));
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+// Restore saved data from the iPhone's app storage if the web storage was cleared
+if(NATIVE){ nat('Preferences','get',{key:'jarl-v1'}).then(r=>{let local=null; try{local=localStorage.getItem('jarl-v1')}catch(e){}
+  if(r&&r.value&&!local){ try{localStorage.setItem('jarl-v1',r.value); localStorage.setItem('jarl-welcome','1')}catch(e){} location.reload(); } }).catch(()=>{}); }
+const HEALTH={loaded:false,vo2:null,vo2w:[],rhr:null,rhrw:[],hrv:null};
+async function loadHealth(){
+  if(!NATIVE||!state.health.connected) return;
+  const g=(m,o)=>withTimeout(nat('JarlHealth',m,o),8000).catch(()=>null);
+  const [v,vw,r,rw,h]=await Promise.all([g('latest',{type:'vo2max'}),g('weekly',{type:'vo2max',weeks:12}),g('latest',{type:'restingHeartRate'}),g('weekly',{type:'restingHeartRate',weeks:12}),g('latest',{type:'hrv'})]);
+  HEALTH.vo2=v&&v.found?v:null; HEALTH.vo2w=(vw&&vw.points)||[]; HEALTH.rhr=r&&r.found?r:null; HEALTH.rhrw=(rw&&rw.points)||[]; HEALTH.hrv=h&&h.found?h:null; HEALTH.loaded=true;
+  if(!state.player) render();
+}
+if(NATIVE){ try{ CAP.addListener('JarlHealth','heartRate',(d)=>{ const x=(d&&d.bpm!=null)?d:(d&&d.data)||{}; const P=state.player; if(!P||!P.real||!x.bpm) return; if(x.date&&x.date<P.t0-60000) return; P.hr=x.bpm; P.lastHrAt=Date.now(); P.hrLog.push(x.bpm); }); }catch(e){}
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadHealth(); }); }
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -671,7 +687,7 @@ function connectSheet(){
   sheet(`<span class="eyebrow">Apple Health</span><h2>Let Jarl read your heart data</h2>
    <p>Jarl reads these from Apple Health. Your Apple Watch, Garmin or chest strap already writes them there.</p>
    <ul class="perm">${[['Heart rate','During workouts'],['Resting heart rate','Daily'],['Heart rate variability','Recovery'],['VO\u2082 max','Fitness trend'],['Walking steadiness','Balance']].map(x=>`<li><span>${x[0]}</span><span class="muted small">${x[1]}</span></li>`).join('')}</ul>
-   <p class="muted small">Read only. Your health data stays on your iPhone and is never uploaded. In this prototype the pulse is simulated.</p>
+   <p class="muted small">Read only. Your health data stays on your iPhone and is never uploaded.${NATIVE?' Apple will ask you which data to share. Tap <b>Turn On All</b>, then <b>Allow</b>.':' In this web preview the pulse is simulated. The iPhone app reads real data.'}</p>
    <button class="btn primary" data-act="allowhealth">Allow</button>
    <button class="btn ghost" data-act="closesheet">Not now</button>`);
 }
@@ -753,13 +769,7 @@ function viewTodayInner(){
   </div>
   <div class="stack">
     <div class="row between"><h3>Your three numbers</h3><button class="btn link" data-tab="progress">Details</button></div>
-    <div class="trio">
-      <div class="mini"><span>VO₂ max</span><b class="num">36.2</b><span class="up">▲ 2.1 in 12 wk</span></div>
-      <div class="mini"><span>Resting pulse</span><b class="num">61</b><span class="up">▼ 4 bpm</span></div>
-      <div class="mini"><span>Sessions/wk</span><b class="num">2.6</b><span class="up">Target 2–3</span></div>
-    </div>
-    ${state.health.connected?`<p class="row small muted"><span class="hr" style="--hrc:var(--accent)">${HEART}<span class="num">58</span><small>bpm</small></span>Resting pulse this morning, from Apple Health. Other numbers are example data.</p>`
-      :`<button class="btn ghost" data-act="connect">${HEART.replace('<svg','<svg style="width:18px;height:18px;fill:var(--alert)"')} Connect Apple Health for your pulse</button><p class="muted small">Example data until you connect.</p>`}
+    ${threeNumbers()}
   </div>
   <div class="card stack">
     <div class="row between"><h3>8-minute mobility</h3><span class="pill rest">Rest days</span></div>
@@ -825,7 +835,7 @@ const TERMS_HTML=`<h1>User Agreement and Assumption of Risk</h1>
 <p>We may update, suspend or discontinue all or part of the app, and we may revise this agreement. If we make material changes, we will tell you in the app and ask you to accept the new version before you continue. You may stop using the app at any time by deleting it. We may suspend or end your access for a reasonable operational, security, legal or enforcement reason, subject to applicable law.</p>
 
 <h2>12. Privacy</h2>
-<p>Your settings and training log are stored on your device. Health data the app reads from Apple Health is processed on your device and is not uploaded to us. More details are in our Privacy Policy: [Privacy Policy link].</p>
+<p>Your settings and training log are stored on your device. Health data the app reads from Apple Health is processed on your device and is not uploaded to us. More details are in our <a href="https://vidarmar.github.io/garpur-jarl/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
 
 <h2>13. Apple App Store terms</h2>
 <p>This agreement is between you and us, not Apple Inc. (“Apple”). We, not Apple, are solely responsible for the app and its content, maintenance and support. Apple has no obligation to provide maintenance or support for the app.</p>
@@ -907,53 +917,69 @@ function spark(vals,{w=320,h=90,fmt=v=>v,color='var(--accent)'}={}){
    <path d="${p}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
    <circle cx="${x(li)}" cy="${y(vals[li])}" r="5" fill="${color}"/></svg>`;
 }
+function sessionsPerWeek(n=8){const out=[]; for(let k=n-1;k>=0;k--){const m=MON-k*7*DAY; out.push(state.history.filter(h=>h.d>=m&&h.d<m+7*DAY).length)} return out}
+function trendTxt(arr,dec,better){ if(arr.length<2) return ''; const d=arr[arr.length-1].value-arr[0].value; if(Math.abs(d)<(dec?0.1:1)) return 'steady'; const up=d>0; return `${up?'\u25B2':'\u25BC'} ${Math.abs(d).toFixed(dec)} in ${arr.length} wk`; }
+function threeNumbers(){
+  const sw=sessionsPerWeek(8), started=state.history.length?Math.min(8,Math.max(1,Math.ceil((MON+7*DAY-Math.min(...state.history.map(h=>h.d)))/(7*DAY)))):0;
+  const avg=started?(sw.slice(-started).reduce((a,b)=>a+b,0)/started):0;
+  const v=HEALTH.vo2, r=HEALTH.rhr, conn=state.health.connected&&NATIVE;
+  const tile=(lbl,val,sub)=>`<div class="mini"><span>${lbl}</span><b class="num">${val}</b><span class="up">${sub}</span></div>`;
+  return `<div class="trio">${tile('VO\u2082 max',v?v.value.toFixed(1):'\u2013',v?(trendTxt(HEALTH.vo2w,1)||'ml/kg/min'):(conn?'No data yet':'Apple Health'))}${tile('Resting pulse',r?Math.round(r.value):'\u2013',r?(trendTxt(HEALTH.rhrw,0)||'bpm'):(conn?'No data yet':'Apple Health'))}${tile('Trainings/wk',started?avg.toFixed(1):'0',`Target ${Math.min(3,state.days.length)}+`)}</div>
+   ${conn?`<p class="small muted">${r?`Latest resting pulse from Apple Health, ${fmtDay(r.date,{weekday:'short',day:'numeric',month:'short'})}.`:'Connected to Apple Health. Values appear once your watch has recorded them.'}</p>`
+     :NATIVE?`<button class="btn ghost" data-act="connect">${HEART.replace('<svg','<svg style="width:18px;height:18px;fill:var(--alert)"')} Connect Apple Health</button>`
+     :`<p class="muted small">Fitness and pulse come from Apple Health in the iPhone app.</p>`}`;
+}
 function viewProgress(){
-  const vo2=[34.1,34.0,34.4,34.8,34.6,35.1,35.3,35.2,35.7,35.9,36.0,36.2];
-  const rhr=[65,65,64,64,63,64,63,62,62,61,62,61];
-  const wks=[2,3,2,3,3,2,3,3];
-  const bands=[['Low',31],['Fair',35],['Good',39],['V. good',44],['Top',99]]; const cur=36.2; const bi=bands.findIndex(b=>cur<b[1]);
-  const bw=320,bh=110,bx=i=>14+i*38;
-  const bars=wks.map((v,i)=>`<rect x="${bx(i)}" y="${bh-18-v*26}" width="26" height="${v*26}" rx="4" fill="var(--accent)" opacity="${i===wks.length-1?1:.55}"/><text x="${bx(i)+13}" y="${bh-4}" font-size="11" text-anchor="middle" fill="var(--muted)">${i-7===0?'Now':i-7}</text>`).join('');
-  const lifts=[['Goblet squat',fmtKg(12),fmtKg(18)],['Dumbbell bench press',fmtKg(10),fmtKg(16)],['One-arm row',fmtKg(14),fmtKg(20)],['Romanian deadlift',fmtKg(12),fmtKg(18)],['Single-leg stand','15 s','30 s']];
+  const conn=state.health.connected&&NATIVE;
+  const bands=[['Low',31],['Fair',35],['Good',39],['V. good',44],['Top',99]];
+  const sw=sessionsPerWeek(8), maxW=Math.max(3,...sw), bw=320,bh=110,bx=i=>14+i*38, sc=v=>v*(78/maxW);
+  const bars=sw.map((v,i)=>`<rect x="${bx(i)}" y="${bh-18-sc(v)}" width="26" height="${Math.max(v?sc(v):2,2)}" rx="4" fill="${v?'var(--accent)':'var(--line)'}" opacity="${i===7?1:.6}"/><text x="${bx(i)+13}" y="${bh-4}" font-size="11" text-anchor="middle" fill="var(--muted)">${i===7?'Now':i-7}</text>`).join('');
+  const started=state.history.length, total8=sw.reduce((a,b)=>a+b,0);
+  const noHealth=(what,how)=>`<p class="muted">${conn?`No ${what} in Apple Health yet. ${how}`:NATIVE?'Connect Apple Health on the You tab to see this.':'This comes from Apple Health in the iPhone app.'}</p>`;
+  const vo2=HEALTH.vo2, vw=HEALTH.vo2w.map(p=>p.value), rhr=HEALTH.rhr, rw=HEALTH.rhrw.map(p=>p.value);
+  const bi=vo2?bands.findIndex(b=>vo2.value<b[1]):-1;
+  const lifts=Object.keys(state.first).filter(n=>state.last[n]).map(n=>{const f=state.first[n],l=state.last[n],st=stepFor({start:f.w>=30?30:0});return [n,convW(f.w,f.u||'kg',U(),st),convW(l.w,l.u||'kg',U(),st)]}).filter(x=>x[1]&&x[2]).slice(0,8);
   return `
-  <div class="stack"><span class="eyebrow">Progress · last 12 weeks</span><h1>Three numbers that matter</h1>
-  <p>Fitness, heart and habit. Compared with men your age and with your own past, never with 25-year-olds.</p>
-  <span class="pill warn" style="align-self:flex-start">Example data. The iPhone app reads these from Apple Health.</span></div>
+  <div class="stack"><span class="eyebrow">Progress</span><h1>Three numbers that matter</h1>
+  <p>Fitness, heart and habit. Compared with your own past and with men your age, never with 25-year-olds.</p>
+  ${conn?'<span class="pill" style="align-self:flex-start">From Apple Health and your training log</span>':''}</div>
   ${(()=>{const wk=weekPlan(), done=wk.done, L={}, src=done.length?done:wk.plan; src.forEach(h=>{const t=trainingLoad(h.s); for(const g in t) L[g]=(L[g]||0)+t[g]});
     return `<div class="card stack"><div class="row between"><h2>Muscles this week</h2><span class="pill ${done.length?'':'plain'}">${done.length?`${done.length} training${done.length>1?'s':''} done`:'Planned'}</span></div>
     ${src.length?bodyMap(L,'Muscles this week'):'<p class="muted">No trainings planned this week.</p>'}
     <p class="muted small">${done.length?'Darker areas got more work. Every muscle group should show some colour by the end of the week.':'Nothing logged yet this week. This shows what your planned trainings will work.'}</p></div>`})()}
   <div class="card stack">
-    <div class="row between"><h2>VO₂ max</h2><span class="pill">${bands[bi][0]} for men 50–59</span></div>
-    <div class="row" style="align-items:baseline"><span class="bigval num">36.2</span><span class="muted">ml/kg/min</span></div>
-    ${spark(vo2,{fmt:v=>v.toFixed(1)})}
+    <div class="row between"><h2>VO\u2082 max</h2>${vo2?`<span class="pill">${bands[bi][0]} for men 50\u201359</span>`:''}</div>
+    ${vo2?`<div class="row" style="align-items:baseline"><span class="bigval num">${vo2.value.toFixed(1)}</span><span class="muted">ml/kg/min</span></div>
+    ${vw.length>=2?spark(vw,{fmt:v=>v.toFixed(1)}):''}
     <div class="bands" aria-hidden="true">${bands.map((b,i)=>`<div class="${i===bi?'on':''}"></div>`).join('')}</div>
     <div class="bandlbl">${bands.map(b=>`<span>${b[0]}</span>`).join('')}</div>
-    <p>Up 2.1 points in 12 weeks, which moves you from Fair to Good for your age group. Higher VO₂ max is one of the strongest signs of a long, healthy life. Brisk walks on rest days keep it climbing.</p>
-    <p class="note">Age bands are approximate, based on published norms for men aged 50–59.</p>
+    <p>${vw.length>=2?(()=>{const d=vw[vw.length-1]-vw[0];return Math.abs(d)<.3?`Steady over the last ${vw.length} weeks.`:d>0?`Up ${d.toFixed(1)} over the last ${vw.length} weeks. Keep it up.`:`Down ${(-d).toFixed(1)} over the last ${vw.length} weeks. Brisk walks on rest days help bring it back up.`})():'One reading so far. The trend appears as Apple Watch records more.'} Higher VO\u2082 max is one of the strongest signs of a long, healthy life.</p>
+    <p class="note">Age bands are approximate, based on published norms for men aged 50\u201359. Latest reading ${fmtDay(vo2.date,{day:'numeric',month:'short'})}.</p>`
+    :noHealth('VO\u2082 max','Apple Watch estimates it during outdoor walks, runs or hikes of 20 minutes or more.')}
   </div>
   <div class="card stack">
-    <div class="row between"><h2>Resting pulse</h2><span class="pill">Healthy range</span></div>
-    <div class="row" style="align-items:baseline"><span class="bigval num">61</span><span class="muted">beats per minute</span></div>
-    ${spark(rhr,{fmt:v=>v,color:'var(--rest)'})}
-    <p>Down 4 beats in 12 weeks. Your heart now does the same job with less effort. A bad night or a cold can push it up for a few days, so watch the trend, not the single day.</p>
+    <div class="row between"><h2>Resting pulse</h2>${rhr?`<span class="pill">${rhr.value<50?'Low':rhr.value<=75?'Healthy range':'Above average'}</span>`:''}</div>
+    ${rhr?`<div class="row" style="align-items:baseline"><span class="bigval num">${Math.round(rhr.value)}</span><span class="muted">beats per minute</span></div>
+    ${rw.length>=2?spark(rw,{fmt:v=>Math.round(v),color:'var(--rest)'}):''}
+    <p>${rw.length>=2?(()=>{const d=rw[rw.length-1]-rw[0];return Math.abs(d)<1?`Steady over the last ${rw.length} weeks.`:d<0?`Down ${Math.round(-d)} beats over ${rw.length} weeks. Your heart is doing the same job with less effort.`:`Up ${Math.round(d)} beats over ${rw.length} weeks. Poor sleep, stress or a cold can do this. Watch the trend.`})():'The trend appears as your watch records more nights.'} A single day says little; the trend says a lot.</p>`
+    :noHealth('resting pulse','Wear your Apple Watch during the day and overnight.')}
   </div>
   <div class="card stack">
-    <div class="row between"><h2>Strength sessions</h2><span class="pill">On target</span></div>
-    <div class="row" style="align-items:baseline"><span class="bigval num">2.6</span><span class="muted">per week, 8-week average</span></div>
-    <svg class="spark" viewBox="0 0 ${bw} ${bh}" role="img" aria-label="Sessions per week over 8 weeks: ${wks.join(', ')}">
-      <line x1="10" x2="${bx(7)+30}" y1="${bh-18-2*26}" y2="${bh-18-2*26}" stroke="var(--line)" stroke-dasharray="3 4"/>
-      <line x1="10" x2="${bx(7)+30}" y1="${bh-18-3*26}" y2="${bh-18-3*26}" stroke="var(--line)" stroke-dasharray="3 4"/>
+    <div class="row between"><h2>Strength trainings</h2>${started?`<span class="pill">${total8} in 8 weeks</span>`:''}</div>
+    ${started?`<svg class="spark" viewBox="0 0 ${bw} ${bh}" role="img" aria-label="Trainings per week over 8 weeks: ${sw.join(', ')}">
+      <line x1="10" x2="${bx(7)+30}" y1="${bh-18-sc(2)}" y2="${bh-18-sc(2)}" stroke="var(--line)" stroke-dasharray="3 4"/>
+      <line x1="10" x2="${bx(7)+30}" y1="${bh-18-sc(3)}" y2="${bh-18-sc(3)}" stroke="var(--line)" stroke-dasharray="3 4"/>
       ${bars}
-      <text x="${bx(7)+36}" y="${bh-18-2*26+4}" font-size="11" fill="var(--muted)">2</text>
-      <text x="${bx(7)+36}" y="${bh-18-3*26+4}" font-size="11" fill="var(--muted)">3</text>
-    </svg>
-    <p>Two sessions a week keep your muscle. Three build it. Showing up week after week matters more than any single workout.</p>
+      <text x="${bx(7)+36}" y="${bh-18-sc(2)+4}" font-size="11" fill="var(--muted)">2</text>
+      <text x="${bx(7)+36}" y="${bh-18-sc(3)+4}" font-size="11" fill="var(--muted)">3</text>
+    </svg>`:'<p class="muted">Your first training will show up here.</p>'}
+    <p>Two trainings a week keep your muscle. Three build it. Showing up week after week matters more than any single workout.</p>
   </div>
   <div class="card stack"><h3>Stronger since you started</h3>
-    <ol class="exlist">${lifts.map(l=>`<li style="grid-template-columns:1fr auto"><span>${l[0]}</span><span class="num"><span class="muted">${l[1]} →</span> <b>${l[2]}</b></span></li>`).join('')}</ol>
+    ${lifts.length?`<ol class="exlist">${lifts.map(l=>`<li style="grid-template-columns:1fr auto"><span>${l[0]}</span><span class="num"><span class="muted">${l[1]} \u2192</span> <b>${l[2]} ${U()}</b></span></li>`).join('')}</ol>`:'<p class="muted">Log a few trainings and your strength progress appears here, from your first weights to today.</p>'}
   </div>`;
 }
+
 function viewProfile(){
   const sw=(k,label,desc)=>`<label class="switch" for="j-${k}"><span><b>${label}</b><br><span class="muted small">${desc}</span></span><input type="checkbox" id="j-${k}" data-joint="${k}" ${state.joints[k]?'checked':''}></label>`;
   const seg=(key,opts)=>`<div class="seg" role="group">${opts.map(([v,l])=>`<button data-seg="${key}" data-v="${v}" aria-pressed="${String(state[key])===String(v)}">${l}</button>`).join('')}</div>`;
@@ -968,7 +994,7 @@ function viewProfile(){
     ${sw('back','Lower back','Supported rows and bridges instead of forward bending')}
   </div>
   <div class="card"><h3 style="margin-bottom:4px">Heart rate</h3>
-    <div class="src"><span><b>Apple Health</b><br><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?'Connected. Pulse, resting pulse, HRV, VO\u2082 max':'Not connected'}</span></span>
+    <div class="src"><span><b>Apple Health</b><br><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?(NATIVE?'Connected. Pulse, resting pulse, HRV, VO\u2082 max':'Simulated in this web preview'):'Not connected'}</span></span>
       <button class="btn ${state.health.connected?'ghost':'primary'}" style="width:auto;min-height:44px" data-act="${state.health.connected?'disconnect':'connect'}">${state.health.connected?'Disconnect':'Connect'}</button></div>
     <div class="src"><span><b>Apple Watch</b><br><span class="muted small">Live pulse during sessions, through Apple Health</span></span><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?'Active':'Off'}</span></div>
     <div class="src"><span><b>Garmin watch</b><br><span class="muted small">Turn on Apple Health sync in the Garmin Connect app</span></span><span class="status off">Via Health</span></div>
@@ -989,7 +1015,8 @@ function viewProfile(){
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
-  <div class="card stack"><h3>User Agreement</h3><p class="muted small">${termsOk()?`Version ${state.terms.version}, accepted on ${fmtDay(state.terms.at,{day:'numeric',month:'long',year:'numeric'})}.`:'Not yet accepted. You\u2019ll be asked before your first training.'}</p><button class="btn ghost" data-act="terms-view">Read the User Agreement</button></div>
+  <div class="card stack"><h3>User Agreement</h3><p class="muted small">${termsOk()?`Version ${state.terms.version}, accepted on ${fmtDay(state.terms.at,{day:'numeric',month:'long',year:'numeric'})}.`:'Not yet accepted. You\u2019ll be asked before your first training.'}</p><button class="btn ghost" data-act="terms-view">Read the User Agreement</button>
+    <p class="small" style="display:flex;gap:18px;flex-wrap:wrap"><a href="https://vidarmar.github.io/garpur-jarl/privacy.html" target="_blank" rel="noopener">Privacy Policy</a><a href="https://vidarmar.github.io/garpur-jarl/support.html" target="_blank" rel="noopener">Help and support</a></p></div>
   <button class="btn ghost" style="color:var(--alert)" data-act="reset">${state.resetArm?'Tap again to erase all data':'Reset the app'}</button>
   <p class="note">Jarl is a training guide, not medical advice. If you have heart problems, high blood pressure or recent surgery, check with your doctor before you start. Stop any exercise that causes sharp pain.</p>
   <p class="muted small num" style="text-align:center">Version ${APP_VERSION} \u00b7 ${APP_DATE} \u00b7 <button class="btn link small" style="min-height:0;padding:0;font-size:inherit" data-act="terms-view">User Agreement</button></p>`;
@@ -1014,7 +1041,8 @@ function checkinSheet(s){
    <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
 }
 function startSession(s,ck={}){
-  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
+  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&state.health.connected,lastHrAt:0,light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
+  if(state.player.real){ state.player.hr=null; nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{}); }
   $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
 }
@@ -1052,7 +1080,7 @@ function renderPlayerInner(){
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
    <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
-   <div class="pwrap">${warm}${items}
+   <div class="pwrap">${P.real&&!state.hrMed?'<p class="hint" id="hrwait" hidden><b>No pulse yet.</b> For live pulse, start a <b>Traditional Strength Training</b> workout on your Apple Watch. Garmin users: pulse arrives after the watch syncs.</p>':''}${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
 }
@@ -1061,11 +1089,13 @@ function tick(){
   const P=state.player; if(!P) return;
   const el=$('#elapsed'); if(el) el.textContent=mmss((Date.now()-P.t0)/1000)+' elapsed';
   const now=Date.now(), dt=(now-P.lastT)/1000; P.lastT=now; const on=state.health.connected;
-  if(on){ const target=P.idx===-1?96:84, tau=P.idx===-1?60:32;
-    P.hr=target+(P.hr-target)*Math.exp(-dt/tau)+(Math.random()-.5)*.8; P.hrLog.push(P.hr);
-    const c=$('#hrchip'); if(c){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} }
-  const hr=Math.round(P.hr), high=on&&P.hr>maxHR()*.85, ready=on&&P.hr<readyHR();
-  const pulseLine=state.hrMed?'Rest until your breathing has settled.':on?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
+  if(on&&!P.real){ const target=P.idx===-1?96:84, tau=P.idx===-1?60:32;
+    P.hr=target+(P.hr-target)*Math.exp(-dt/tau)+(Math.random()-.5)*.8; P.hrLog.push(P.hr); }
+  const fresh=P.real?(P.hr&&now-P.lastHrAt<180000):on;
+  if(on){ const c=$('#hrchip'); if(c){ if(fresh){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} else {c.style.setProperty('--hrc','var(--muted)'); c.innerHTML=`${HEART}<small>Waiting for watch</small>`;} }
+    const w=$('#hrwait'); if(w) w.hidden=!(P.real&&!P.lastHrAt&&now-P.t0>45000); }
+  const hr=Math.round(P.hr||0), high=on&&fresh&&P.hr>maxHR()*.85, ready=on&&fresh&&P.hr<readyHR();
+  const pulseLine=state.hrMed?'Rest until your breathing has settled.':(on&&fresh)?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
   const bar=$('#restbar');
   if(P.rest){const left=(P.rest.end-Date.now())/1000;
     if(left<=0){ if(!P.rest.over){P.rest.over=true; try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
@@ -1078,12 +1108,12 @@ function logSet(){LIGHT=!!(state.player&&state.player.light); try{logSetInner()}
 function logSetInner(){
   const P=state.player, e=exFor(P.s)[P.idx], r=resolve(e), n=setsFor(r);
   const logs=P.logs[e.id]=P.logs[e.id]||[]; logs.push({w:P.cur.w,r:P.cur.r});
-  const bump=r.unit==='min'?Math.max(0,maxHR()*.66-P.hr):r.unit==='sec'?6:r.unit==='bw'?20:r.unit==='m'?36:30; P.hr=Math.min(maxHR()*.9,P.hr+bump+Math.random()*6); P.hrLog.push(P.hr);
+  if(!P.real){const bump=r.unit==='min'?Math.max(0,maxHR()*.66-P.hr):r.unit==='sec'?6:r.unit==='bw'?20:r.unit==='m'?36:30; P.hr=Math.min(maxHR()*.9,P.hr+bump+Math.random()*6); P.hrLog.push(P.hr);}
   if(logs.length>=n){ P.rest=null; const nx=exFor(P.s).findIndex((x,i)=>i>P.idx&&(P.logs[x.id]||[]).length<setsFor(resolve(x)));
     if(nx>-1){ P.rest={end:Date.now()+45e3,total:45}; openEx(nx); return; } P.idx=99; renderPlayer(); return; }
   const rs=restFor(r); P.rest=rs?{end:Date.now()+rs*1000,total:rs}:null; renderPlayer();
 }
-function closePlayer(){clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow=''; render();}
+function closePlayer(){if(state.player&&state.player.real) nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow=''; render();}
 function finishFlow(){
   const P=state.player;
   sheet(`<h2>How did that feel?</h2><p class="muted">Be honest. The app uses this to set next session’s weights.</p>
@@ -1091,9 +1121,10 @@ function finishFlow(){
    <button class="opt" data-act="effort" data-v="right"><b>About right</b><span class="muted small">1–3 reps left, good form throughout</span></button>
    <button class="opt" data-act="effort" data-v="hard"><b>Too hard</b><span class="muted small">I struggled, or something hurt</span></button>`);
 }
-function completeSession(effort){
+async function completeSession(effort){
   const P=state.player, ex=exFor(P.s); let sets=0;
-  ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r),u:U()};}});
+  if(P.real){ nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); try{ const r=await withTimeout(nat('JarlHealth','heartRateSamples',{from:P.t0,to:Date.now()}),4000); if(r&&r.samples&&r.samples.length) P.hrLog=r.samples.map(x=>x.bpm); }catch(e){} }
+  ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r),u:U()}; if(!state.first[r.name]&&(r.unit==='kg'||r.unit==='m')) state.first[r.name]={w:L[0].w,u:U(),d:T0};}});
   state.history=state.history.filter(h=>h.d!==T0); state.history.push({d:T0,s:P.s,light:!!P.light}); save();
   const mins=Math.max(1,Math.round((Date.now()-P.t0)/60000));
   const msg={easy:'Next time the weights go up on the lifts where you hit the top of the range.',
@@ -1103,7 +1134,7 @@ function completeSession(effort){
   const hrLine=!state.hrMed&&state.health.connected&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
   const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
   sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
-   <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/3</b></div></div>
+   <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/${Math.max(weekPlan().days.length,weekPlan().done.length)}</b></div></div>
    ${hrLine}
    <p class="coach">${msg}</p>
    <p class="hint"><b>Tip:</b> ${TIPS[(state.history.length-1+TIPS.length)%TIPS.length]}</p>
@@ -1228,7 +1259,10 @@ document.addEventListener('click',ev=>{
     case 'onboard-done': state.onboard=false; state.tab='today'; render(); window.scrollTo(0,0); break;
     case 'demo': demoSheet(t.dataset.name); break;
     case 'toggleanim': toggleAnim(t.querySelector('svg')); break;
-    case 'allowhealth': state.health.connected=true; save(); closeSheet(); if(state.player){state.player.lastT=Date.now(); renderPlayer()} else render(); break;
+    case 'allowhealth': { const done=()=>{state.health.connected=true; save(); closeSheet(); if(state.player){state.player.lastT=Date.now(); renderPlayer()} else render(); loadHealth();};
+      if(NATIVE){ t.disabled=true; t.textContent='Asking Apple Health\u2026'; nat('JarlHealth','requestAuthorization',{}).then(done).catch(err=>{ closeSheet(); sheet(`<h2>Apple Health isn\u2019t available</h2><p>${(err&&err.message)||'Something went wrong.'}</p><p class="muted small">You can change Health access any time in the iPhone Settings app, under <b>Health</b>, then <b>Data Access &amp; Devices</b>, then <b>Jarl</b>.</p><button class="btn ghost" data-act="closesheet">OK</button>`); }); }
+      else done();
+      break; }
     case 'disconnect': state.health.connected=false; save(); render(); break;
   }
 });
@@ -1241,6 +1275,7 @@ document.addEventListener('change',ev=>{
 });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('#sheet').hidden) closeSheet();});
 render();
+loadHealth();
 </script>
 
 </body>
