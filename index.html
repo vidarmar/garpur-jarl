@@ -248,6 +248,11 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 .opt{width:100%;text-align:left;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
 .opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
 .note{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.paylist{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.payrow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.save{font-size:.8rem;font-weight:700;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.paylinks{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center}.paylinks .btn.link{min-height:36px;padding:0;font-size:inherit}
+#sheet .btn[disabled]{opacity:.6}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -270,7 +275,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.3', APP_DATE='7 Oct 2026';
+const APP_VERSION='2.4', APP_DATE='7 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -407,6 +412,84 @@ async function loadHealth(){
 }
 if(NATIVE){ try{ CAP.addListener('JarlHealth','heartRate',(d)=>{ const x=(d&&d.bpm!=null)?d:(d&&d.data)||{}; const P=state.player; if(!P||!P.real||!x.bpm) return; if(x.date&&x.date<P.t0-60000) return; P.hr=x.bpm; P.lastHrAt=Date.now(); P.hrLog.push(x.bpm); }); }catch(e){}
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadHealth(); }); }
+/* ---------- Jarl Premium: App Store subscription (iPhone app only) ---------- */
+const PLANS={yearly:'com.maravconsult.jarl.yearly',monthly:'com.maravconsult.jarl.monthly'};
+const TERMS_URL='https://vidarmar.github.io/garpur-jarl/terms.html', PRIV_URL='https://vidarmar.github.io/garpur-jarl/privacy.html';
+const STORE={products:null,loaded:false,loading:null,busy:false,pick:'yearly',msg:'',next:null};
+state.sub={active:false};
+try{const c=JSON.parse(localStorage.getItem('jarl-sub')||'null'); if(c&&typeof c==='object') state.sub=c;}catch(e){}
+function setSub(e){ if(!e||e.active==null) return; state.sub={active:!!e.active,productId:e.productId||null,expires:e.expires||null,inTrial:!!e.inTrial,willRenew:e.willRenew!==false,checked:Date.now()}; try{localStorage.setItem('jarl-sub',JSON.stringify(state.sub))}catch(x){} }
+// Premium if subscribed. The web preview is always open. A cached expiry gets 3 days' grace for renewals made while offline.
+const premium=()=>!NATIVE||!!(state.sub.active&&(!state.sub.expires||state.sub.expires+3*864e5>Date.now()));
+function loadStore(){
+  if(!NATIVE) return Promise.resolve();
+  if(STORE.loading) return STORE.loading;
+  STORE.loading=Promise.all([withTimeout(nat('JarlStore','products',{ids:Object.values(PLANS)}),10000).catch(()=>null), withTimeout(nat('JarlStore','entitlement'),8000).catch(()=>null)]).then(([p,e])=>{
+    const list=(p&&p.products)||[]; STORE.products=list.length?list:null; STORE.loaded=true; STORE.loading=null; if(e) setSub(e); });
+  return STORE.loading;
+}
+const planOf=id=>id===PLANS.monthly?'monthly':id===PLANS.yearly?'yearly':null;
+const prodOf=k=>STORE.products&&STORE.products.find(p=>p.id===PLANS[k]);
+function trialLen(p){ const i=p&&p.intro; if(!i||i.mode!=='freeTrial'||!p.trialEligible) return ''; const n=(i.value||1)*(i.count||1);
+  return i.unit==='day'?`${n} days`:i.unit==='week'?`${n*7} days`:i.unit==='month'?(n===1?'1 month':`${n} months`):(n===1?'1 year':`${n} years`); }
+const perWord=p=>p&&p.period?(p.period.value>1?`${p.period.value} ${p.period.unit}s`:p.period.unit):'';
+function money(v,cur){ try{return new Intl.NumberFormat(navigator.language||'en',{style:'currency',currency:cur,maximumFractionDigits:0}).format(v)}catch(e){return Math.round(v)+' '+cur} }
+function payHTML(){
+  if(!STORE.loaded) return `<span class="eyebrow">Jarl Premium</span><h2>Loading the plans…</h2><p class="muted">Asking the App Store. This takes a moment.</p><button class="btn ghost" data-act="pay-close">Not now</button>`;
+  const y=prodOf('yearly'), m=prodOf('monthly'), sel=prodOf(STORE.pick)||y||m, trial=trialLen(sel);
+  const save=(y&&m&&m.price>0)?Math.round((1-y.price/(m.price*12))*100):0;
+  const opt=(k,p,extra)=>p?`<button class="opt" data-act="pay-pick" data-v="${k}" aria-pressed="${sel===p}"><span class="payrow"><b>${k==='yearly'?'Yearly':'Monthly'}</b>${extra||''}</span><span>${p.displayPrice} per ${perWord(p)}${k==='yearly'&&p.price?` <span class="muted small">· ${money(p.price/12,p.currency)} a month</span>`:''}</span></button>`:'';
+  const legal=trial?`Free for ${trial}, then ${sel.displayPrice} per ${perWord(sel)}. The subscription renews automatically at the same price until you cancel. To avoid being charged, cancel at least 24 hours before the trial ends in Settings, then your name, then Subscriptions. Payment is charged to your Apple ID.`
+    :`${sel.displayPrice} per ${perWord(sel)}, charged to your Apple ID when you confirm. Renews automatically until you cancel. Cancel at least 24 hours before the period ends in Settings, then your name, then Subscriptions.`;
+  return `<span class="eyebrow">Jarl Premium</span>
+  <h2>${trial?`Train free for ${trial}`:'Keep training with Jarl'}</h2>
+  <p>Every training, built around your joints and your pace.${trial?' You pay nothing until the trial ends, and you can cancel before then.':''}</p>
+  <ul class="paylist"><li>Your full plan, 2 to 6 days a week</li><li>Joint-friendly swaps, light days and a lighter week every sixth week</li><li>Live pulse from Apple Watch, with rest guided by your heart</li><li>Progress compared with men your age</li></ul>
+  <div class="stack" role="group" aria-label="Choose a plan">${opt('yearly',y,save>0?`<span class="save">Save ${save}%</span>`:'')}${opt('monthly',m)}</div>
+  ${STORE.msg?`<p class="small" style="color:var(--warn)"><b>${STORE.msg}</b></p>`:''}
+  <button class="btn primary" data-act="pay-buy" ${STORE.busy?'disabled':''}>${STORE.busy?'One moment…':trial?'Start free trial':'Subscribe'}</button>
+  <p class="small muted">${legal}</p>
+  <p class="small paylinks"><button class="btn link small" data-act="pay-restore">Restore purchases</button><a href="${TERMS_URL}" target="_blank" rel="noopener">Terms of Use</a><a href="${PRIV_URL}" target="_blank" rel="noopener">Privacy Policy</a></p>
+  <button class="btn ghost" data-act="pay-close">Not now</button>`;
+}
+function paywall(next){
+  STORE.next=next||null; STORE.msg=''; STORE.busy=false; sheet(payHTML());
+  if(!STORE.loaded) loadStore().then(()=>{ if($('#sheet').hidden) return;
+    if(premium()||!STORE.products) return payDone(); sheet(payHTML()); });
+}
+// Continue to what the user was doing before the paywall
+function payDone(){ const nx=STORE.next; STORE.next=null; closeSheet(); if(nx&&nx.startsWith('start:')) checkinSheet(nx.slice(6)); else render(); }
+// Training gate. If the App Store has no plans to offer (for example before subscriptions are set up), training stays open.
+function gateStart(s){ if(premium()||(STORE.loaded&&!STORE.products)) return checkinSheet(s); paywall('start:'+s); }
+async function payBuy(){
+  const p=prodOf(STORE.pick)||prodOf('yearly')||prodOf('monthly'); if(!p||STORE.busy) return;
+  STORE.busy=true; STORE.msg=''; sheet(payHTML());
+  let r=null; try{ r=await nat('JarlStore','purchase',{id:p.id}); }catch(e){ STORE.msg='The purchase didn’t go through. Check your connection and try again.'; }
+  STORE.busy=false;
+  if(r&&r.status==='purchased'&&r.active){ setSub(r); return payDone(); }
+  if(r&&r.status==='pending') STORE.msg='Waiting for approval. If Ask to Buy is on, the family organiser needs to approve it first.';
+  sheet(payHTML());
+}
+async function payRestore(){
+  STORE.busy=true; STORE.msg=''; sheet(payHTML());
+  const r=await nat('JarlStore','restore').catch(()=>null); STORE.busy=false;
+  if(r) setSub(r);
+  if(premium()) return payDone();
+  STORE.msg=r?'No active Jarl subscription was found for this Apple ID.':'Couldn’t reach the App Store. Try again in a moment.'; sheet(payHTML());
+}
+function subCard(){
+  if(!NATIVE) return '';
+  const S=state.sub, d=S.expires?fmtDay(S.expires,{day:'numeric',month:'long',year:'numeric'}):'', plan=planOf(S.productId)==='monthly'?'Monthly':'Yearly';
+  let txt, btns;
+  if(premium()){ txt=S.inTrial?(S.willRenew?`Free trial until ${d}. Then the ${plan.toLowerCase()} plan starts.`:`Free trial until ${d}. It won’t renew.`):`${plan} plan. ${S.willRenew?'Renews':'Ends'} on ${d}.`;
+    btns=`<button class="btn ghost" data-act="sub-manage">Manage or cancel</button>`; }
+  else if(STORE.loaded&&!STORE.products){ txt='Subscriptions aren’t available from the App Store yet, so every training is open.'; btns=''; }
+  else { txt='Not subscribed. You can look around and plan, but trainings need Jarl Premium.'; btns=`<button class="btn primary" data-act="sub-plans">See plans</button><button class="btn link small" style="align-self:flex-start" data-act="sub-restore">Restore purchases</button>`; }
+  return `<div class="card stack"><h3>Jarl Premium</h3><p class="muted small">${txt}</p>${btns}</div>`;
+}
+if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
+  setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
 try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
 function save(){try{const J=JSON.stringify({first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
 
@@ -1015,6 +1098,7 @@ function viewProfile(){
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
+  ${subCard()}
   <div class="card stack"><h3>User Agreement</h3><p class="muted small">${termsOk()?`Version ${state.terms.version}, accepted on ${fmtDay(state.terms.at,{day:'numeric',month:'long',year:'numeric'})}.`:'Not yet accepted. You\u2019ll be asked before your first training.'}</p><button class="btn ghost" data-act="terms-view">Read the User Agreement</button>
     <p class="small" style="display:flex;gap:18px;flex-wrap:wrap"><a href="https://vidarmar.github.io/garpur-jarl/privacy.html" target="_blank" rel="noopener">Privacy Policy</a><a href="https://vidarmar.github.io/garpur-jarl/support.html" target="_blank" rel="noopener">Help and support</a></p></div>
   <button class="btn ghost" style="color:var(--alert)" data-act="reset">${state.resetArm?'Tap again to erase all data':'Reset the app'}</button>
@@ -1209,7 +1293,7 @@ document.addEventListener('click',ev=>{
   if(t.dataset.seg){state[t.dataset.seg]=isNaN(+t.dataset.v)?t.dataset.v:+t.dataset.v; save(); render(); return}
   const P=state.player, a=t.dataset.act;
   switch(a){
-    case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} checkinSheet(t.dataset.s); break;
+    case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} gateStart(t.dataset.s); break;
     case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k])); break;}
     case 'ckstart': {const ck=t.dataset.allgood?{}:{...CK}; closeSheet(); startSession(t.dataset.s,ck); break;}
     case 'mobility': mobilitySheet(); break;
@@ -1240,12 +1324,19 @@ document.addEventListener('click',ev=>{
     case 'closesheet': closeSheet(); break;
     case 'connect': connectSheet(); break;
     case 'terms-view': termsOpen(null); break;
+    case 'pay-pick': STORE.pick=t.dataset.v; STORE.msg=''; sheet(payHTML()); break;
+    case 'pay-buy': payBuy(); break;
+    case 'pay-restore': payRestore(); break;
+    case 'pay-close': STORE.next=null; closeSheet(); break;
+    case 'sub-plans': paywall(null); break;
+    case 'sub-restore': STORE.next=null; paywall(null); payRestore(); break;
+    case 'sub-manage': nat('JarlStore','manage').then(()=>nat('JarlStore','entitlement')).then(e=>{setSub(e); render();}).catch(()=>{}); break;
     case 'reset': if(!state.resetArm){state.resetArm=true; render(); setTimeout(()=>{state.resetArm=false},5000); break;} try{localStorage.removeItem('jarl-v1');localStorage.removeItem('jarl-welcome')}catch(e){} location.reload(); break;
     case 'terms-close': termsClose(); break;
     case 'terms-decline': termsClose(); sheet(`<h2>You can look, but not train yet</h2><p>To use Jarl, you need to accept the User Agreement. You can read it any time from the welcome screen or the You tab.</p><button class="btn ghost" data-act="closesheet">OK</button>`); break;
     case 'terms-accept': { if(!$('#terms-check')||!$('#terms-check').checked) break; state.terms={version:TERMS_VERSION,at:Date.now()}; save(); const nx=termsNext; termsClose();
       if(nx==='welcome-go'||nx==='welcome-skip'){ const b=document.createElement('button'); b.dataset.act=nx; b.hidden=true; document.body.appendChild(b); b.click(); b.remove(); }
-      else if(nx&&nx.startsWith('start:')) checkinSheet(nx.slice(6)); else render();
+      else if(nx&&nx.startsWith('start:')) gateStart(nx.slice(6)); else render();
       break; }
     case 'move': moveSheet(+t.dataset.i); break;
     case 'movetoday': moveTo(+t.dataset.from,+t.dataset.to); closeSheet(); render(); break;
