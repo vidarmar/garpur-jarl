@@ -277,7 +277,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.5', APP_DATE='8 Oct 2026';
+const APP_VERSION='2.6', APP_DATE='8 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -412,7 +412,15 @@ async function loadHealth(){
   HEALTH.vo2=v&&v.found?v:null; HEALTH.vo2w=(vw&&vw.points)||[]; HEALTH.rhr=r&&r.found?r:null; HEALTH.rhrw=(rw&&rw.points)||[]; HEALTH.hrv=h&&h.found?h:null; HEALTH.loaded=true;
   if(!state.player) render();
 }
-if(NATIVE){ try{ CAP.addListener('JarlHealth','heartRate',(d)=>{ const x=(d&&d.bpm!=null)?d:(d&&d.data)||{}; const P=state.player; if(!P||!P.real||!x.bpm) return; if(x.date&&x.date<P.t0-60000) return; P.hr=x.bpm; P.lastHrAt=Date.now(); P.hrLog.push(x.bpm); }); }catch(e){}
+// Pulse from Apple Health (Apple Watch) or Bluetooth (Garmin broadcast, chest straps). Bluetooth wins when both send.
+function onPulse(d){ const x=(d&&d.bpm!=null)?d:(d&&d.data)||{}; const P=state.player; if(!P||!P.real||!x.bpm) return; if(x.date&&x.date<P.t0-60000) return;
+  const bt=x.source==='bluetooth'; if(!bt&&P.hrSrc==='bluetooth'&&Date.now()-P.lastHrAt<10000) return;
+  P.hr=x.bpm; P.lastHrAt=Date.now(); P.hrSrc=bt?'bluetooth':'health'; P.hrLog.push(x.bpm); }
+const pulseOn=()=>!!(state.health.connected||(NATIVE&&state.hrdev));
+function stopPulse(){ nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); nat('JarlHR','disconnect',{}).catch(()=>{}); }
+const BLE={found:{},scanning:false,err:'',busy:'',ok:''};
+if(NATIVE){ try{ CAP.addListener('JarlHealth','heartRate',onPulse); CAP.addListener('JarlHR','heartRate',onPulse);
+  CAP.addListener('JarlHR','device',(d)=>{ const x=(d&&d.id)?d:(d&&d.data)||{}; if(!x.id) return; BLE.found[x.id]=x; if($('#sheet .blelist')) sheet(bleHTML()); }); }catch(e){}
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadHealth(); }); }
 /* ---------- Jarl Premium: App Store subscription (iPhone app only) ---------- */
 const PLANS={yearly:'com.maravconsult.jarl.yearly',monthly:'com.maravconsult.jarl.monthly'};
@@ -492,8 +500,8 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -768,6 +776,35 @@ function bodyMap(L,label){
 const ZONES=[['Zone 1','Very light',.5,.6],['Zone 2','Light',.6,.7],['Zone 3','Moderate',.7,.8],['Zone 4','Hard',.8,.9],['Zone 5','Maximum',.9,1]];
 function zone(hr){const p=hr/maxHR(), i=p<.6?0:p<.7?1:p<.8?2:p<.9?3:4; return [`Z${i+1} ${ZONES[i][1]}`,`var(--z${i+1})`,i];}
 function zoneLegend(){const m=maxHR(); return `<div class="zones" aria-label="Heart-rate zones">${ZONES.map((z,i)=>`<div><span style="background:var(--z${i+1})"></span><b>${z[0].replace('Zone ','Z')}</b><small class="num">${Math.round(m*z[2])}\u2013${Math.round(m*z[3])}</small><small>${z[1]}</small></div>`).join('')}</div>`}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function bleHTML(){
+  const list=Object.values(BLE.found).sort((a,b)=>(b.rssi||-99)-(a.rssi||-99));
+  if(BLE.ok) return `<span class="eyebrow">Live heart rate</span><h2>Connected to ${esc(BLE.ok)}</h2><p>Your pulse now shows live during training. Jarl connects to it by itself when you start a training.</p>
+    <p class="muted small">Garmin: turn on <b>Broadcast Heart Rate</b> before each training. It uses some extra watch battery while it’s on.</p><button class="btn primary" data-act="closesheet">Done</button>`;
+  return `<span class="eyebrow">Live heart rate</span><h2>Connect a Garmin or chest strap</h2>
+   <ol class="stack" style="margin:0;padding-left:1.2em">
+    <li><b>Garmin watch:</b> turn on <b>Broadcast Heart Rate</b>. On most models, hold the <b>UP</b> button or open the controls menu, then choose <b>Broadcast Heart Rate</b>.</li>
+    <li><b>Chest strap:</b> put it on and wet the pads. It wakes up when it feels your heartbeat.</li>
+    <li>Tap it in the list below.</li></ol>
+   <div class="stack blelist">${list.map(d=>`<button class="opt" data-act="blepick" data-id="${esc(d.id)}" data-name="${esc(d.name)}" ${BLE.busy?'disabled':''}><b>${esc(d.name)}</b><span class="muted small">${BLE.busy===d.id?'Connecting…':'Tap to connect'}</span></button>`).join('')}
+    ${list.length?'':`<p class="muted">${BLE.err?'':BLE.scanning?'Searching… Keep the watch or strap close to your iPhone.':'Starting Bluetooth…'}</p>`}</div>
+   ${BLE.err?`<p class="small" style="color:var(--warn)"><b>${esc(BLE.err)}</b></p>`:''}
+   <button class="btn ghost" data-act="blecancel">Cancel</button>`;
+}
+function bleSheet(){
+  if(!NATIVE){ sheet(`<h2>Bluetooth heart rate</h2><p>This works in the iPhone app.</p><button class="btn ghost" data-act="closesheet">OK</button>`); return; }
+  BLE.found={}; BLE.err=''; BLE.busy=''; BLE.ok=''; BLE.scanning=false; sheet(bleHTML());
+  nat('JarlHR','scan',{}).then(()=>{ BLE.scanning=true; if($('#sheet .blelist')) sheet(bleHTML()); }).catch(e=>{ BLE.err=(e&&e.message)||'Bluetooth isn’t available.'; if($('#sheet .blelist')) sheet(bleHTML()); });
+}
+async function blePick(id,name){
+  BLE.busy=id; BLE.err=''; sheet(bleHTML());
+  nat('JarlHR','stopScan',{}).catch(()=>{});
+  try{ const r=await withTimeout(nat('JarlHR','connect',{id}),15000);
+    state.hrdev={id,name:(r&&r.name)||name}; save(); BLE.busy=''; BLE.ok=state.hrdev.name;
+    const P=state.player; if(P){ P.real=true; P.hr=null; P.lastHrAt=0; renderPlayer(); } else nat('JarlHR','disconnect',{}).catch(()=>{});
+    sheet(bleHTML()); if(!P) render();
+  }catch(e){ BLE.busy=''; BLE.err=e&&e.message==='timeout'?'No answer. Check that it’s broadcasting and close by, then tap it again.':((e&&e.message)||'Couldn’t connect.'); sheet(bleHTML()); }
+}
 function healthHelp(){
   sheet(`<span class="eyebrow">Apple Health</span><h2>Apple Health didn\u2019t answer</h2>
    <p>You can turn it on yourself in a minute:</p>
@@ -783,6 +820,7 @@ function connectSheet(){
    <ul class="perm">${[['Heart rate','During workouts'],['Resting heart rate','Daily'],['Heart rate variability','Recovery'],['VO\u2082 max','Fitness trend'],['Walking steadiness','Balance']].map(x=>`<li><span>${x[0]}</span><span class="muted small">${x[1]}</span></li>`).join('')}</ul>
    <p class="muted small">Read only. Your health data stays on your iPhone and is never uploaded.${NATIVE?' Apple will ask you which data to share. Tap <b>Turn On All</b>, then <b>Allow</b>.':' In this web preview the pulse is simulated. The iPhone app reads real data.'}</p>
    <button class="btn primary" data-act="allowhealth">Allow</button>
+   ${NATIVE?'<p class="muted small">Garmin or chest strap? For live pulse, <button class="btn link small" style="min-height:0;padding:0;font-size:inherit" data-act="blefind">connect it over Bluetooth</button>.</p>':''}
    <button class="btn ghost" data-act="closesheet">Not now</button>`);
 }
 
@@ -1091,8 +1129,8 @@ function viewProfile(){
     <div class="src"><span><b>Apple Health</b><br><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?(NATIVE?'Connected. Pulse, resting pulse, HRV, VO\u2082 max':'Simulated in this web preview'):'Not connected'}</span></span>
       <button class="btn ${state.health.connected?'ghost':'primary'}" style="width:auto;min-height:44px" data-act="${state.health.connected?'disconnect':'connect'}">${state.health.connected?'Disconnect':'Connect'}</button></div>
     <div class="src"><span><b>Apple Watch</b><br><span class="muted small">Live pulse during sessions, through Apple Health</span></span><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?'Active':'Off'}</span></div>
-    <div class="src"><span><b>Garmin watch</b><br><span class="muted small">Turn on Apple Health sync in the Garmin Connect app</span></span><span class="status off">Via Health</span></div>
-    <div class="src"><span><b>Chest strap</b><br><span class="muted small">Polar H10 and other Bluetooth straps. Most accurate for strength work</span></span><span class="status off">Coming</span></div>
+    <div class="src"><span><b>Garmin watch</b><br><span class="muted small">Pulse after the workout through Apple Health. For live pulse, use Bluetooth below</span></span><span class="status off">Via Health</span></div>
+    <div class="src"><span><b>Live over Bluetooth</b><br><span class="${state.hrdev?'status on':'muted small'}">${state.hrdev?'Connected: '+esc(state.hrdev.name):'Garmin with Broadcast Heart Rate, Polar, Wahoo and other heart rate straps'}</span></span>${NATIVE?`<button class="btn ${state.hrdev?'ghost':'primary'}" style="width:auto;min-height:44px" data-act="${state.hrdev?'bleforget':'blefind'}">${state.hrdev?'Forget':'Connect'}</button>`:'<span class="status off">iPhone app</span>'}</div>
     <label class="switch" for="hrmed" style="border-top:1px solid var(--line)"><span><b>I take medication that lowers my heart rate</b><br><span class="muted small">For example beta-blockers. Jarl then uses breathing and effort instead of pulse zones.</span></span><input type="checkbox" id="hrmed" data-pref="hrMed" ${state.hrMed?'checked':''}></label>
     ${state.hrMed?'<p class="muted small" style="padding-top:8px">Pulse zones are switched off. Rest until your breathing has settled, and keep cardio at a pace where you can talk.</p>':''}${state.hrMed?'':`<div style="padding-top:10px">${zoneLegend()}</div>`}<p class="muted small" style="padding-top:8px;${state.hrMed?'display:none':''}">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
   </div>
@@ -1136,8 +1174,10 @@ function checkinSheet(s){
    <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
 }
 function startSession(s,ck={}){
-  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&state.health.connected,lastHrAt:0,light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
-  if(state.player.real){ state.player.hr=null; nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{}); }
+  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&pulseOn(),lastHrAt:0,hrSrc:'',light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
+  if(state.player.real){ state.player.hr=null;
+    if(state.health.connected) nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{});
+    if(state.hrdev) nat('JarlHR','connect',{id:state.hrdev.id}).catch(()=>{}); }
   $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
 }
@@ -1174,8 +1214,8 @@ function renderPlayerInner(){
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
-   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':state.health.connected?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
-   <div class="pwrap">${P.real&&!state.hrMed?'<p class="hint" id="hrwait" hidden><b>No pulse yet.</b> For live pulse, start a <b>Traditional Strength Training</b> workout on your Apple Watch. Garmin users: pulse arrives after the watch syncs.</p>':''}${warm}${items}
+   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':pulseOn()?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
+   <div class="pwrap">${P.real&&!state.hrMed?`<p class="hint" id="hrwait" hidden>${state.hrdev?`<b>No pulse from ${esc(state.hrdev.name)} yet.</b> Check that it\u2019s on and close by. On a Garmin, turn on <b>Broadcast Heart Rate</b>.`:`<b>No live pulse.</b> An Apple Watch sends live pulse during a <b>Traditional Strength Training</b> workout. A Garmin sends pulse to Apple Health only after the workout. For live Garmin pulse, turn on <b>Broadcast Heart Rate</b> on the watch and connect it under <b>You</b>, then <b>Heart rate</b>.`} Until then, rest is guided by time and breathing.</p>`:''}${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
 }
@@ -1183,11 +1223,11 @@ function mmss(s){s=Math.max(0,Math.round(s));return `${Math.floor(s/60)}:${Strin
 function tick(){
   const P=state.player; if(!P) return;
   const el=$('#elapsed'); if(el) el.textContent=mmss((Date.now()-P.t0)/1000)+' elapsed';
-  const now=Date.now(), dt=(now-P.lastT)/1000; P.lastT=now; const on=state.health.connected;
+  const now=Date.now(), dt=(now-P.lastT)/1000; P.lastT=now; const on=pulseOn();
   if(on&&!P.real){ const target=P.idx===-1?96:84, tau=P.idx===-1?60:32;
     P.hr=target+(P.hr-target)*Math.exp(-dt/tau)+(Math.random()-.5)*.8; P.hrLog.push(P.hr); }
-  const fresh=P.real?(P.hr&&now-P.lastHrAt<180000):on;
-  if(on){ const c=$('#hrchip'); if(c){ if(fresh){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} else {c.style.setProperty('--hrc','var(--muted)'); c.innerHTML=`${HEART}<small>Waiting for watch</small>`;} }
+  const fresh=P.real?(P.hr&&now-P.lastHrAt<(P.hrSrc==='bluetooth'?15000:180000)):on;
+  if(on){ const c=$('#hrchip'); if(c){ if(fresh){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} else {c.style.setProperty('--hrc','var(--muted)'); c.innerHTML=`${HEART}<small>${P.real&&!P.lastHrAt&&now-P.t0>90000?'No live pulse':state.hrdev?'Waiting for '+esc(state.hrdev.name):'Waiting for watch'}</small>`;} }
     const w=$('#hrwait'); if(w) w.hidden=!(P.real&&!P.lastHrAt&&now-P.t0>45000); }
   const hr=Math.round(P.hr||0), high=on&&fresh&&P.hr>maxHR()*.85, ready=on&&fresh&&P.hr<readyHR();
   const pulseLine=state.hrMed?'Rest until your breathing has settled.':(on&&fresh)?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
@@ -1212,7 +1252,7 @@ function logSetInner(){
 }
 // The next exercise with sets left, after the current one (or from the top)
 function nextOpen(P){const ex=exFor(P.s), left=(x)=>(P.logs[x.id]||[]).length<setsFor(resolve(x)); let i=ex.findIndex((x,k)=>k>P.idx&&left(x)); if(i<0) i=ex.findIndex(left); return i;}
-function closePlayer(){if(state.player&&state.player.real) nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow=''; render();}
+function closePlayer(){if(state.player&&state.player.real) stopPulse(); clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow=''; render();}
 function finishFlow(){
   const P=state.player;
   sheet(`<h2>How did that feel?</h2><p class="muted">Be honest. The app uses this to set next session’s weights.</p>
@@ -1222,7 +1262,7 @@ function finishFlow(){
 }
 async function completeSession(effort){
   const P=state.player, ex=exFor(P.s); let sets=0;
-  if(P.real){ nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); try{ const r=await withTimeout(nat('JarlHealth','heartRateSamples',{from:P.t0,to:Date.now()}),4000); if(r&&r.samples&&r.samples.length) P.hrLog=r.samples.map(x=>x.bpm); }catch(e){} }
+  if(P.real){ stopPulse(); if(state.health.connected&&P.hrSrc!=='bluetooth') try{ const r=await withTimeout(nat('JarlHealth','heartRateSamples',{from:P.t0,to:Date.now()}),4000); if(r&&r.samples&&r.samples.length) P.hrLog=r.samples.map(x=>x.bpm); }catch(e){} }
   ex.forEach(e=>{const L=P.logs[e.id]; if(L&&L.length){sets+=L.length; const r=resolve(e); state.last[r.name]={w:L[0].w,r:L.map(x=>x.r),u:U()}; if(!state.first[r.name]&&(r.unit==='kg'||r.unit==='m')) state.first[r.name]={w:L[0].w,u:U(),d:T0};}});
   state.history=state.history.filter(h=>h.d!==T0); state.history.push({d:T0,s:P.s,light:!!P.light}); save();
   const mins=Math.max(1,Math.round((Date.now()-P.t0)/60000));
@@ -1230,7 +1270,7 @@ async function completeSession(effort){
     right:'That’s exactly the zone that builds muscle without wearing you down. Same plan next time.',
     hard:'Next time the weights drop by about 10%. If a joint hurt, use Swap for that exercise. See a doctor if pain lasts more than a few days.'}[effort];
   const hl=P.hrLog, avg=hl.length?Math.round(hl.reduce((a,b)=>a+b,0)/hl.length):0, peak=hl.length?Math.round(Math.max(...hl)):0;
-  const hrLine=!state.hrMed&&state.health.connected&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
+  const hrLine=!state.hrMed&&pulseOn()&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
   const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
   sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
    <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/${Math.max(weekPlan().days.length,weekPlan().done.length)}</b></div></div>
@@ -1244,7 +1284,7 @@ async function completeSession(effort){
 
 /* ---------- Sheets ---------- */
 function sheet(html){const s=$('#sheet'); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
-function closeSheet(){if(typeof mobStop==='function')mobStop();$('#sheet').hidden=true; $('#sheet').innerHTML='';}
+function closeSheet(){if(typeof mobStop==='function')mobStop(); if($('#sheet .blelist')&&NATIVE) nat('JarlHR','stopScan',{}).catch(()=>{});$('#sheet').hidden=true; $('#sheet').innerHTML='';}
 function swapSheet(i){
   const P=state.player, e=exFor(P?P.s:currentS())[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
   if(!e.alts.length){sheet(`<h2>${e.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
@@ -1375,6 +1415,10 @@ document.addEventListener('click',ev=>{
       else done();
       break; }
     case 'disconnect': state.health.connected=false; save(); render(); break;
+    case 'blefind': bleSheet(); break;
+    case 'blepick': blePick(t.dataset.id,t.dataset.name); break;
+    case 'blecancel': nat('JarlHR','stopScan',{}).catch(()=>{}); closeSheet(); break;
+    case 'bleforget': nat('JarlHR','disconnect',{}).catch(()=>{}); state.hrdev=null; save(); render(); break;
     case 'healthmanual': state.health.connected=true; save(); closeSheet(); if(state.player){state.player.real=NATIVE; state.player.hr=null; nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{}); renderPlayer()} else render(); loadHealth(); break;
   }
 });
