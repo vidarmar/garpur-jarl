@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -44,6 +44,8 @@
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+@media (min-width:700px){:root{--col:680px}}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.125rem;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
@@ -53,7 +55,7 @@ h2{font-size:1.3rem;font-weight:800}
 h3{font-size:1.05rem;font-weight:600}
 p{margin:0}
 .num{font-variant-numeric:tabular-nums}
-.wrap{max-width:480px;margin:0 auto;padding-inline:20px;padding-block:20px 128px;display:flex;flex-direction:column;gap:22px}
+.wrap{max-width:var(--col,480px);margin:0 auto;padding-inline:20px;padding-block:20px 128px;display:flex;flex-direction:column;gap:22px}
 .eyebrow{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .muted{color:var(--muted)}
 .small{font-size:.9rem}
@@ -94,13 +96,13 @@ details.map summary::-webkit-details-marker{display:none}
 .breath{background:var(--rest-soft);color:var(--ink);border-radius:10px;padding:8px 12px}
 /* user agreement */
 #terms{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:30;padding-top:env(safe-area-inset-top,0px)}
-.legal{max-width:480px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;display:flex;flex-direction:column;gap:12px}
+.legal{max-width:var(--col,480px);margin:0 auto;padding-inline:20px;padding-block:18px 40px;display:flex;flex-direction:column;gap:12px}
 .legal h1{font-size:1.5rem}
 .legal h2{font-size:1.05rem;margin-top:10px}
 .legal p,.legal li{font-size:.95rem;line-height:1.55}
 .legal ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
 .accept{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px))}
-.accept .in{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.accept .in{max-width:var(--col,480px);margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .check{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;font-size:.95rem;cursor:pointer}
 .check input{width:24px;height:24px;margin:2px 0 0;accent-color:var(--accent)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -174,7 +176,7 @@ button.day:hover .dot{background:var(--accent-soft)}
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
-.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs .in{max-width:var(--col,480px);margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 12px;font-size:.8rem;color:var(--muted);font-weight:700}
 .tab svg{width:26px;height:26px}
 .tab[aria-current="page"]{color:var(--accent)}
@@ -218,8 +220,8 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 /* player */
 #player{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:20;padding-top:env(safe-area-inset-top,0px)}
 .phead{position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line)}
-.phead .in{max-width:480px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.pwrap{max-width:480px;margin:0 auto;padding-inline:20px;padding-block:18px 160px;display:flex;flex-direction:column;gap:12px}
+.phead .in{max-width:var(--col,480px);margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pwrap{max-width:var(--col,480px);margin:0 auto;padding-inline:20px;padding-block:18px 160px;display:flex;flex-direction:column;gap:12px}
 .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
 .step>button.head{width:100%;display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:14px 16px;text-align:left}
 .step .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);font-family:var(--display);font-weight:800;font-size:.9rem}
@@ -236,7 +238,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 .stepper small{font-size:.75rem;color:var(--muted)}
 .hint{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:.95rem}
 .restbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--rest);color:var(--surface);padding-bottom:env(safe-area-inset-bottom,0px)}
-.restbar .in{max-width:480px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.restbar .in{max-width:var(--col,480px);margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
 .restbar .t{font-family:var(--display);font-weight:800;font-size:1.8rem;min-width:84px}
 .restbar .track{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.3);overflow:hidden}
 .restbar .fill{height:100%;background:var(--surface);width:100%}
@@ -244,14 +246,14 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 
 /* sheet */
 #sheet{position:fixed;inset:0;z-index:40;background:rgba(10,16,13,.5);display:flex;align-items:flex-end;justify-content:center}
-#sheet .panel{background:var(--surface);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+#sheet .panel{background:var(--surface);width:100%;max-width:var(--col,480px);border-radius:18px 18px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .opt{width:100%;text-align:left;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
 .opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
 .note{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .paylist{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
 .payrow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
 .save{font-size:.8rem;font-weight:700;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:3px 10px;white-space:nowrap}
-.paylinks{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center}.paylinks .btn.link{min-height:36px;padding:0;font-size:inherit}
+.paylinks{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center}.paylinks a{color:var(--accent);text-underline-offset:3px}.paylinks .btn.link{min-height:36px;padding:0;font-size:inherit}
 #sheet .btn[disabled]{opacity:.6}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -275,7 +277,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.4', APP_DATE='7 Oct 2026';
+const APP_VERSION='2.5', APP_DATE='8 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -766,6 +768,15 @@ function bodyMap(L,label){
 const ZONES=[['Zone 1','Very light',.5,.6],['Zone 2','Light',.6,.7],['Zone 3','Moderate',.7,.8],['Zone 4','Hard',.8,.9],['Zone 5','Maximum',.9,1]];
 function zone(hr){const p=hr/maxHR(), i=p<.6?0:p<.7?1:p<.8?2:p<.9?3:4; return [`Z${i+1} ${ZONES[i][1]}`,`var(--z${i+1})`,i];}
 function zoneLegend(){const m=maxHR(); return `<div class="zones" aria-label="Heart-rate zones">${ZONES.map((z,i)=>`<div><span style="background:var(--z${i+1})"></span><b>${z[0].replace('Zone ','Z')}</b><small class="num">${Math.round(m*z[2])}\u2013${Math.round(m*z[3])}</small><small>${z[1]}</small></div>`).join('')}</div>`}
+function healthHelp(){
+  sheet(`<span class="eyebrow">Apple Health</span><h2>Apple Health didn\u2019t answer</h2>
+   <p>You can turn it on yourself in a minute:</p>
+   <ol class="stack" style="margin:0;padding-left:1.2em"><li>Open the <b>Settings</b> app.</li><li>Tap <b>Health</b>, then <b>Data Access &amp; Devices</b>, then <b>Jarl</b>.</li><li>Tap <b>Turn On All</b>.</li><li>Come back here and tap <b>I\u2019ve turned it on</b>.</li></ol>
+   <p class="muted small">Don\u2019t see Jarl in the list? Tap <b>Try again</b> first.</p>
+   <button class="btn primary" data-act="healthmanual">I\u2019ve turned it on</button>
+   <button class="btn ghost" data-act="allowhealth">Try again</button>
+   <button class="btn link" style="align-self:center" data-act="closesheet">Not now</button>`);
+}
 function connectSheet(){
   sheet(`<span class="eyebrow">Apple Health</span><h2>Let Jarl read your heart data</h2>
    <p>Jarl reads these from Apple Health. Your Apple Watch, Garmin or chest strap already writes them there.</p>
@@ -1156,7 +1167,7 @@ function renderPlayerInner(){
       ${(r.unit==='kg'||r.unit==='bw'||r.unit==='m')&&!(r.m.length===1&&r.m[0]==='Balance')?'<p class="small breath"><b>Breathe out as you lift.</b> Don\u2019t hold your breath.</p>':''}
       <p class="hint">${sg.text}</p>
       <div class="sets">${chips}</div>
-      ${done?`<p class="muted">All sets done.</p>`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
+      ${done?`<p class="muted">All sets done.</p>${(()=>{const nx=nextOpen(P); return nx>-1?`<button class="btn primary" data-act="nextex">Next: ${resolve(ex[nx]).name}</button>`:''})()}`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
       <button class="btn primary" data-act="log">${r.unit==='min'?'Log cardio':`Log set ${logs.length+1} of ${n}`}</button>`}
       <div class="row between"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="skip">Skip</button></div>
     </div></div>`;
@@ -1183,8 +1194,9 @@ function tick(){
   const bar=$('#restbar');
   if(P.rest){const left=(P.rest.end-Date.now())/1000;
     if(left<=0){ if(!P.rest.over){P.rest.over=true; try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
-      bar.innerHTML=`<div class="in"><span style="flex:1"><b>Rest over.</b> Next set when you’re ready.</span><button data-act="restskip">OK</button></div>`;
-    } else bar.innerHTML=`<div class="in"><span class="t num">${mmss(left)}</span><span style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="small">${pulseLine}</span><span class="track"><span class="fill" style="display:block;width:${(left/P.rest.total*100).toFixed(1)}%"></span></span></span><button data-act="restadd">+15 s</button><button data-act="restskip">Skip</button></div>`;
+      bar.innerHTML=P.rest.next!=null?`<div class="in"><span style="flex:1"><b>Rest over.</b> Next: ${resolve(exFor(P.s)[P.rest.next]).name}.</span><button data-act="nextex">Go</button></div>`
+        :`<div class="in"><span style="flex:1"><b>Rest over.</b> Next set when you’re ready.</span><button data-act="restskip">OK</button></div>`;
+    } else bar.innerHTML=`<div class="in"><span class="t num">${mmss(left)}</span><span style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="small">${P.rest.label?`<b>${P.rest.label}.</b> `:''}${pulseLine}</span><span class="track"><span class="fill" style="display:block;width:${(left/P.rest.total*100).toFixed(1)}%"></span></span></span><button data-act="restadd">+15 s</button><button data-act="restskip">Skip</button></div>`;
     bar.hidden=false;
   } else bar.hidden=true;
 }
@@ -1193,10 +1205,13 @@ function logSetInner(){
   const P=state.player, e=exFor(P.s)[P.idx], r=resolve(e), n=setsFor(r);
   const logs=P.logs[e.id]=P.logs[e.id]||[]; logs.push({w:P.cur.w,r:P.cur.r});
   if(!P.real){const bump=r.unit==='min'?Math.max(0,maxHR()*.66-P.hr):r.unit==='sec'?6:r.unit==='bw'?20:r.unit==='m'?36:30; P.hr=Math.min(maxHR()*.9,P.hr+bump+Math.random()*6); P.hrLog.push(P.hr);}
-  if(logs.length>=n){ P.rest=null; const nx=exFor(P.s).findIndex((x,i)=>i>P.idx&&(P.logs[x.id]||[]).length<setsFor(resolve(x)));
-    if(nx>-1){ P.rest={end:Date.now()+45e3,total:45}; openEx(nx); return; } P.idx=99; renderPlayer(); return; }
-  const rs=restFor(r); P.rest=rs?{end:Date.now()+rs*1000,total:rs}:null; renderPlayer();
+  if(logs.length>=n){ const nx=nextOpen(P);
+    if(nx>-1){ const rs=restFor(r)||45; P.rest={end:Date.now()+rs*1000,total:rs,next:nx,label:`${r.name} done`}; renderPlayer(); return; }
+    P.rest=null; P.idx=99; renderPlayer(); return; }
+  const rs=restFor(r); P.rest=rs?{end:Date.now()+rs*1000,total:rs,label:`Rest after set ${logs.length} of ${n}`}:null; renderPlayer();
 }
+// The next exercise with sets left, after the current one (or from the top)
+function nextOpen(P){const ex=exFor(P.s), left=(x)=>(P.logs[x.id]||[]).length<setsFor(resolve(x)); let i=ex.findIndex((x,k)=>k>P.idx&&left(x)); if(i<0) i=ex.findIndex(left); return i;}
 function closePlayer(){if(state.player&&state.player.real) nat('JarlHealth','stopHeartRate',{}).catch(()=>{}); clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow=''; render();}
 function finishFlow(){
   const P=state.player;
@@ -1275,9 +1290,11 @@ function mobTimer(){
 }
 
 /* ---------- Render & events ---------- */
+const WIDE=window.matchMedia('(min-width: 700px)');
+try{WIDE.addEventListener('change',()=>{ if(state.player) renderPlayer(); render(); })}catch(e){}
 function render(){
   document.documentElement.dataset.scheme=state.scheme;
-  document.documentElement.style.fontSize={m:'100%',l:'112.5%',xl:'125%'}[state.textSize]||'100%';
+  document.documentElement.style.fontSize=(({m:100,l:112.5,xl:125}[state.textSize]||100)*(WIDE.matches?1.3:1))+'%';
   $('.tabs').hidden=state.welcome;
   setTimeout(()=>mountAnims($('#view')),0);
   if(state.welcome){$('#view').innerHTML=viewWelcome();return}
@@ -1304,7 +1321,7 @@ document.addEventListener('click',ev=>{
        <button class="btn ghost" style="color:var(--alert)" data-act="mobquit">Yes, stop and go home</button>`); break;
     case 'mobquit': closeSheet(); state.tab='today'; render(); window.scrollTo(0,0); break;
     case 'mobdone': mobStop(); sheet(`<span class="eyebrow">Rest-day routine</span><h2>Done. That\u2019s your mobility for today.</h2><p class="coach rest">Loose hips and a mobile upper back make every lift safer. Next training: <b>${fmtDay(nextTraining())}</b>.</p><button class="btn primary" data-act="closesheet">Close</button>`); break;
-    case 'open': openEx(+t.dataset.i); break;
+    case 'open': if(P&&P.rest) P.rest.next=null; openEx(+t.dataset.i); break;
     case 'warmdone': openEx(0); break;
     case 'adj': {const k=t.dataset.k; P.cur[k]=Math.max(0,P.cur[k]+(+t.dataset.d)); renderPlayer(); break;}
     case 'log': logSet(); break;
@@ -1312,7 +1329,8 @@ document.addEventListener('click',ev=>{
     case 'swap': swapSheet(+t.dataset.i); break;
     case 'pick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.swaps[e.id]=+t.dataset.a; save(); closeSheet(); if(P){openEx(+t.dataset.i)} else render(); break;}
     case 'restadd': P.rest.end+=15e3; P.rest.total+=15; tick(); break;
-    case 'restskip': P.rest=null; tick(); break;
+    case 'restskip': { const nx=P.rest&&P.rest.next; P.rest=null; if(nx!=null) openEx(nx); else tick(); break; }
+    case 'nextex': { const nx=(P.rest&&P.rest.next!=null)?P.rest.next:nextOpen(P); if(P.rest){ if(P.rest.over) P.rest=null; else { P.rest.next=null; P.rest.label='Rest'; } } if(nx>-1) openEx(nx); window.scrollTo(0,0); break; }
     case 'askclose': {const n=Object.values(state.player.logs).reduce((a,l)=>a+l.length,0);
       sheet(`<h2>Stop this training?</h2><p>Are you sure you want to stop and return to the home screen?</p><p class="muted">${n?`You\u2019ve logged ${n} set${n>1?'s':''}. ${n>1?'They':'It'} won\u2019t count as a completed training, and the training stays planned for today.`:'Nothing has been logged yet. The training stays planned for today.'} To save what you\u2019ve done, tap <b>Finish early</b> at the bottom instead.</p>
        <button class="btn primary" data-act="closesheet">Keep training</button>
@@ -1351,10 +1369,13 @@ document.addEventListener('click',ev=>{
     case 'demo': demoSheet(t.dataset.name); break;
     case 'toggleanim': toggleAnim(t.querySelector('svg')); break;
     case 'allowhealth': { const done=()=>{state.health.connected=true; save(); closeSheet(); if(state.player){state.player.lastT=Date.now(); renderPlayer()} else render(); loadHealth();};
-      if(NATIVE){ t.disabled=true; t.textContent='Asking Apple Health\u2026'; nat('JarlHealth','requestAuthorization',{}).then(done).catch(err=>{ closeSheet(); sheet(`<h2>Apple Health isn\u2019t available</h2><p>${(err&&err.message)||'Something went wrong.'}</p><p class="muted small">You can change Health access any time in the iPhone Settings app, under <b>Health</b>, then <b>Data Access &amp; Devices</b>, then <b>Jarl</b>.</p><button class="btn ghost" data-act="closesheet">OK</button>`); }); }
+      if(NATIVE){ t.disabled=true; t.textContent='Asking Apple Health\u2026'; let answered=false;
+        const slow=setTimeout(()=>{ if(answered||$('#sheet').hidden) return; healthHelp(); },20000);
+        nat('JarlHealth','requestAuthorization',{}).then(r=>{answered=true; clearTimeout(slow); done(r);}).catch(err=>{ answered=true; clearTimeout(slow); closeSheet(); sheet(`<h2>Apple Health isn\u2019t available</h2><p>${(err&&err.message)||'Something went wrong.'}</p><p class="muted small">You can change Health access any time in the iPhone Settings app, under <b>Health</b>, then <b>Data Access &amp; Devices</b>, then <b>Jarl</b>.</p><button class="btn ghost" data-act="closesheet">OK</button>`); }); }
       else done();
       break; }
     case 'disconnect': state.health.connected=false; save(); render(); break;
+    case 'healthmanual': state.health.connected=true; save(); closeSheet(); if(state.player){state.player.real=NATIVE; state.player.hr=null; nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{}); renderPlayer()} else render(); loadHealth(); break;
   }
 });
 document.addEventListener('change',ev=>{
