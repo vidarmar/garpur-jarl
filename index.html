@@ -277,7 +277,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.6', APP_DATE='8 Oct 2026';
+const APP_VERSION='2.7', APP_DATE='8 Oct 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -793,8 +793,11 @@ function bleHTML(){
 }
 function bleSheet(){
   if(!NATIVE){ sheet(`<h2>Bluetooth heart rate</h2><p>This works in the iPhone app.</p><button class="btn ghost" data-act="closesheet">OK</button>`); return; }
-  BLE.found={}; BLE.err=''; BLE.busy=''; BLE.ok=''; BLE.scanning=false; sheet(bleHTML());
-  nat('JarlHR','scan',{}).then(()=>{ BLE.scanning=true; if($('#sheet .blelist')) sheet(bleHTML()); }).catch(e=>{ BLE.err=(e&&e.message)||'Bluetooth isn’t available.'; if($('#sheet .blelist')) sheet(bleHTML()); });
+  BLE.found={}; BLE.err=''; BLE.busy=''; BLE.ok=''; BLE.scanning=false; BLE.pinged=false; sheet(bleHTML());
+  // First a quick ping: if the native Bluetooth part isn't in this build, it never answers.
+  withTimeout(nat('JarlHR','stopScan',{}),3000).then(()=>{BLE.pinged=true; return withTimeout(nat('JarlHR','scan',{}),8000)}).then(()=>{ BLE.scanning=true; if($('#sheet .blelist')) sheet(bleHTML()); }).catch(e=>{
+    BLE.err=(e&&e.message==='timeout')?(BLE.pinged?'Bluetooth didn’t start. Check Settings, then Jarl, and turn on Bluetooth.':'This version of Jarl is missing its Bluetooth part. Install the newest version from TestFlight.'):((e&&e.message)||'Bluetooth isn’t available.');
+    if($('#sheet .blelist')) sheet(bleHTML()); });
 }
 async function blePick(id,name){
   BLE.busy=id; BLE.err=''; sheet(bleHTML());
