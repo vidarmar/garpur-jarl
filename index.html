@@ -93,6 +93,10 @@ details.map summary::-webkit-details-marker{display:none}
 #player.dark{--bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845; --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --rest-soft:#1A2F25; --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark; background:var(--bg); color:var(--ink)}
 /* 1.7 */
 .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ta{width:100%;min-height:104px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
+.ailabel{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
+#sheet.center{align-items:center;padding:16px}
+#sheet.center .panel{border-radius:18px;max-height:calc(100% - 32px);padding-bottom:22px;box-shadow:0 16px 48px rgba(0,0,0,.28)}
 .breath{background:var(--rest-soft);color:var(--ink);border-radius:10px;padding:8px 12px}
 /* user agreement */
 #terms{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:30;padding-top:env(safe-area-inset-top,0px)}
@@ -277,7 +281,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='2.8', APP_DATE='8 Oct 2026';
+const APP_VERSION='2.9', APP_DATE='5 Nov 2026';
 const DAY = 864e5;
 const T0 = (()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})();
 
@@ -388,7 +392,7 @@ const MOBILITY = [
 const state = {
   tab:'today', age:56, length:30, notify:'train',
   joints:{knee:false,shoulder:false,back:false},
-  swaps:{},
+  swaps:{}, variety:{}, hidden:[], swapsBlock:0, ai:true,
   history:[],
   last:{},
   first:{},
@@ -500,8 +504,127 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('jarl-v1')||'null'); if(s){Object.assign(state,{variety:s.variety||{},hidden:Array.isArray(s.hidden)?s.hidden:[],swapsBlock:s.swapsBlock||0,ai:s.ai!==false,age:s.age??56,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'fjord',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({variety:state.variety,hidden:state.hidden,swapsBlock:state.swapsBlock,ai:state.ai,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('jarl-v1',J); if(NATIVE) nat('Preferences','set',{key:'jarl-v1',value:J}).catch(()=>{});}catch(e){}}
+
+/* ---------- Coach box ----------
+   He writes how he feels. Warning signs skip the AI and show the stop message. Otherwise Apple's on-device
+   model (or Jarl's own word rules without it) picks a session type from a fixed menu. The rules set the training. */
+const COACH={ok:false,reason:''};
+if(NATIVE){ withTimeout(nat('JarlCoach','availability',{}),4000).then(r=>{COACH.ok=!!(r&&r.available); COACH.reason=(r&&r.reason)||''; if(!state.player&&$('#sheet').hidden) render();}).catch(()=>{}); }
+const aiOn=()=>COACH.ok&&state.ai!==false;
+const aiTag='<span class="ailabel">Written on your iPhone by Apple Intelligence</span>';
+const AREA={knee:'Knee',shoulder:'Shoulder',back:'Lower back'};
+const RED=/chest (pain|tight|pressure|hurts)|pain in (my |the )?chest|pressure in (my |the )?chest|crushing|(pain|ache|aching).{0,20}(left arm|jaw)|(left arm|jaw).{0,20}(pain|ache|aching|hurts)|heart attack|stroke|slurred|face (is )?droop|blurred vision|sudden (bad |severe )?headache|faint|passed out|blacked out|dizz|light.?headed|can.?t breathe|short of breath|breathless|numb|tingl|bleed|palpitat|heart (is )?(racing|pounding)/i;
+function redSheet(){ sheet(`<span class="eyebrow">Please stop for now</span><h2>Don\u2019t train today</h2><p>What you describe needs a doctor, not a training session. Stop, sit down and rest.</p><p><b>If you have chest pain, trouble breathing or feel faint, call emergency services now</b>: 113 in Norway, 112 in the EU, 999 in the UK, 911 in the US.</p><button class="btn ghost" data-act="closesheet">Close</button>`,true); }
+// AI text is shown only if it is short and stays clear of medical topics. Otherwise Jarl's own text is used.
+const BAD=/diagnos|prescri|dosage|\bdose\b|hormone|testosterone|\btrt\b|prostate|blood pressure|statin|viagra|cholesterol|\bcure|\btreat|medication|!|#/i;
+function cleanAI(t,max){ if(typeof t!=='string') return null; t=t.replace(/\s+/g,' ').trim().replace(/^["\u201c']+|["\u201d']+$/g,''); if(t.length<8||t.length>max||BAD.test(t)) return null; return t; }
+let MOOD=null;
+const MOODS={
+  full:{t:'Your normal session',d:'Sounds like a good day for your planned training.',ck:{}},
+  strong:{t:'Strong day',d:'An extra set on the main lifts, and a step up where you were close to the top last time.',ck:{strong:true}},
+  light:{t:'Light day',d:'Two sets per exercise at last time\u2019s weights. Showing up is what counts.',ck:{tired:true}},
+  calm:{t:'Calmer session',d:'Your normal exercises with longer rests, and two minutes of slow breathing at the end. Moving often helps when your head is busy.',ck:{calm:true}},
+  mobility:{t:'Mobility instead',d:'Today the 8-minute mobility routine may suit you better than lifting. Your training can wait until tomorrow.',alt:'mobility'},
+  walk:{t:'A walk instead',d:'A brisk 20 to 30 minute walk outdoors counts. You can train another day this week.',alt:'walk'},
+  rest:{t:'Rest today',d:'If you feel unwell, rest is the right training today. Come back when you feel better. If you feel very unwell or it doesn\u2019t improve, contact your doctor.',alt:'rest'}};
+function readMood(text){ const s=text.toLowerCase(), m={choice:'full',short:false,sore:[]};
+  if(/knee/.test(s)) m.sore.push('knee'); if(/shoulder|elbow|neck/.test(s)) m.sore.push('shoulder'); if(/\bback\b|spine|\bhips?\b|sciatic/.test(s)) m.sore.push('back');
+  m.short=/short on time|no time|busy day|rushed|quick one|only \d+ ?min|\d+ ?min(ute)?s? only|in a hurry|tight schedule|between meetings/.test(s);
+  const rx=[['rest',/\bsick\b|\bill\b|fever|\bflu\b|covid|virus|migraine|vomit|stomach bug|\b(a|bad|heavy) cold\b/],
+    ['light',/exhaust|wiped|drained|no energy|low energy|so tired|really tired|knackered|shattered|barely slept|didn.?t sleep|did not sleep|bad night|awful night|insomnia|fatigue|hung ?over|hangover|late night|night shift|long shift|jet.?lag|red.?eye|long flight|long drive|hard day|physical day|sore from|not (so |very |feeling )?(great|good|strong)/],
+    ['calm',/anxious|anxiety|stress|overwhelm|\blow\b|\bdown\b|\bsad\b|irritab|grumpy|\bflat\b|worried|on edge|wound up|pressure at work|deadline/],
+    ['mobility',/too (sore|stiff) to|just (want to )?stretch|stiff all over|aching all over|sore all over/],
+    ['walk',/\bwalk\b|fresh air|get outside|outdoors/],
+    ['strong',/strong|great|energ(etic|ised|ized)|full of beans|motivated|ready to go|fantastic|brilliant|amazing|really good|feel good|feeling good/]];
+  for(const [k,r] of rx){ if(r.test(s)){ m.choice=k; break; } }
+  return m; }
+function moodCk(m){ const ck={...(MOODS[m.choice].ck||{})}; if(m.short) ck.short=true; m.sore.forEach(j=>ck[j]=true); return ck; }
+async function moodGo(s){ const box=$('#mood-text'), text=box?box.value.trim():''; if(!text){ if(box) box.focus(); return; }
+  if(RED.test(text)) return redSheet();
+  const k=readMood(text); let m=k, reply='', ai=false;
+  if(aiOn()){ sheet('<h2>Your coach is thinking\u2026</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>',true);
+    try{ const r=await withTimeout(nat('JarlCoach','mood',{text}),15000);
+      if(r){ m={choice:MOODS[r.choice]?r.choice:k.choice, short:!!r.short||k.short,
+        sore:[...new Set([...(Array.isArray(r.sore)?r.sore:[]).filter(j=>AREA[j]),...k.sore])]}; ai=true; const c=cleanAI(r.reply,260); if(c) reply=c; } }catch(e){} }
+  MOOD={s,m,ck:moodCk(m),text}; moodSheet(reply,ai); }
+function moodSheet(reply,ai){ const {s,m}=MOOD, M=MOODS[m.choice], extra=[];
+  if(!M.alt){ if(m.short) extra.push('The 20-minute version.');
+    if(m.sore.length) extra.push(`Joint-friendly versions for your ${m.sore.map(j=>AREA[j].toLowerCase()).join(' and ')}.`);
+    if(m.choice==='strong'&&(isDeloadWeek()||isWelcomeBack())) extra.push(isDeloadWeek()?'This is your lighter week, so the weights stay lighter and there is no extra set.':'You\u2019re coming back from a break, so the weights stay lighter and there is no extra set.'); }
+  const btns=M.alt==='mobility'?`<button class="btn primary" data-act="moodmob">Show the mobility routine</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Train anyway</button>`
+    :M.alt?`<button class="btn primary" data-act="closesheet">OK</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Train anyway</button>`
+    :`<button class="btn primary" data-act="moodstart" data-s="${s}">Start ${TN(s)}</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Change it</button>`;
+  sheet(`<span class="eyebrow">Your coach suggests</span><h2>${m.choice==='full'&&extra.length?'Your session, adjusted':M.t}</h2>
+   ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
+   <p>${m.choice==='full'&&extra.length?extra.join(' '):M.d+(extra.length?' '+extra.join(' '):'')}</p>
+   ${btns}`,true); }
+
+/* ---------- Variety ----------
+   Each exercise slot has a pool: the original plus two variants for the same muscles. A new block every 6 weeks
+   (after the lighter week) moves to the next variant. He can also pick another variant for the rest of the block,
+   or hide an exercise for good. Joint and home filters still apply. Pools are ordered so that no exercise
+   appears twice in the same block. */
+const VAR={
+ goblet:[{name:'Split squat',start:8,f:.5,each:true,cue:'Long stance, a dumbbell in each hand. Lower the back knee straight down toward the floor, then push up through the front foot. Hold a rack for balance if you need it.'},
+   {name:'Dumbbell step-up',start:10,f:.6,each:true,cue:'Knee-height box. Push through the heel of the top foot. Don\u2019t bounce off the bottom foot.'}],
+ bench:[{name:'Alternating dumbbell bench press',start:12,f:.9,cue:'Press one dumbbell up while the other waits at your chest, then switch. Your trunk works to keep you steady.'},
+   {name:'Close-grip dumbbell press',start:12,f:.9,cue:'Dumbbells touching, palms facing each other. Lower to your chest with elbows close to your sides, then press up. Works the back of the arms more.'}],
+ row:[{name:'Chest-supported row',start:12,f:.7,each:false,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.',alts:[]},
+   {name:'Band row',unit:'bw',each:false,cue:'Anchor a band at chest height on a door, or sit with it around your feet. Pull the handles to your ribs and squeeze your shoulder blades together.',alts:[]}],
+ carry:[{name:'Suitcase carry',start:14,f:.7,cue:'One dumbbell, switch hands each length. Stand tall without leaning to the side.',alts:[]},
+   {name:'Farmer march',start:14,f:.7,cue:'A dumbbell in each hand. March slowly forward, lifting each knee toward hip height and standing tall.'}],
+ curl:[{name:'Hammer curl',start:8,f:1,cue:'Palms facing each other. Curl up, then take two seconds to lower. Easy on the elbows.',alts:[]},
+   {name:'Band biceps curl',unit:'bw',cue:'Stand on a resistance band and curl the handles up, then lower slowly.',alts:[]}],
+ facepull:[{name:'Band pull-apart',cue:'Hold a band at shoulder height, arms straight. Pull it apart until it touches your chest and squeeze your shoulder blades.'},
+   {name:'Dumbbell reverse fly',unit:'kg',start:4,f:1,cue:'Sit on the end of a bench with your chest toward your knees. Raise light dumbbells out to the sides, thumbs up.',alts:[{for:'back',name:'Band pull-apart',unit:'bw',cue:'Pull a band apart at shoulder height. No forward bend.'}]}],
+ stand:[{name:'Single-leg stand, eyes closed',cue:'Next to a wall. Lift one foot, then close your eyes and hold. Open them if you wobble.'},
+   {name:'Tandem stance',cue:'One foot directly in front of the other, then hold. Turn your head slowly to make it harder.',alts:[]}],
+ rdl:[{name:'Kettlebell deadlift',start:20,f:1.2,cue:'Kettlebell between your feet. Push your hips back with a flat back, grip the handle and stand up by driving through your heels.'},
+   {name:'Single-leg Romanian deadlift',start:8,f:.4,each:true,cue:'Hold a support with one hand. Hinge on one leg with the other reaching back until you feel the back of your thigh. Keep a flat back.'}],
+ pulldown:[{name:'Neutral-grip pulldown',start:30,f:.9,cue:'Palms facing each other. Pull the bar to your upper chest, driving the elbows down.'},
+   {name:'Single-arm cable pulldown',start:14,f:.45,each:true,cue:'Kneel side-on to a high cable. Pull the handle down to your side, elbow toward your hip.'}],
+ ohp:[{name:'Arnold press',start:8,f:.8,cue:'Seated, dumbbells at shoulder height with palms facing you. Turn your palms forward as you press up.'},
+   {name:'Half-kneeling one-arm press',start:10,f:1,each:true,cue:'Kneel on one knee and hold a dumbbell on the same side as the knee down. Press straight up with your ribs down.'}],
+ split:[{name:'Reverse lunge',start:8,f:1,cue:'Step back and lower your back knee toward the floor, then push through the front foot to return. Hold a rack if you need balance.'},
+   {name:'Lateral lunge',start:6,f:.7,cue:'Step wide to one side and sit back into that hip, the other leg straight. Push back to the middle.'}],
+ deadbug:[{name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds.',alts:[]},
+   {name:'Bent-knee dead bug',cue:'Lower back pressed down, knees bent at 90 degrees. Tap one heel to the floor at a time.',alts:[]}],
+ pushdown:[{name:'Band pushdown',gym:0,unit:'bw',cue:'Anchor a band high on a door and push down until your arms are straight.',alts:[]},
+   {name:'Close-grip push-up',gym:0,unit:'bw',cue:'Hands close together on a bench. Lower your chest with elbows tucked in, then press up.',alts:[]}],
+ sideplank:[{name:'Side plank on knees',cue:'On your forearm with knees bent, lift your hips into a straight line from head to knees.'},
+   {name:'Standing side bend hold',cue:'Hold a dumbbell in one hand and stand tall without leaning toward it.',alts:[]}],
+ tandem:[{name:'Heel-to-toe walk backwards',cue:'Walk 20 steps backwards along a line, toe touching heel. Stay next to a wall.'},
+   {name:'Single-leg stand',unit:'sec',lo:20,hi:30,each:true,cue:'Stand next to a wall. Lift one foot and hold. Turn your head slowly to make it harder.'}],
+ stepup:[{name:'Lateral step-up',start:6,f:.6,cue:'Stand side-on to a low step. Step up sideways, drive through the top foot, then step down slowly.'},
+   {name:'Step-down',unit:'bw',cue:'Stand on a low step. Slowly lower one heel to the floor, then push back up. Builds control for stairs.'}],
+ pushup:[{name:'Dumbbell floor press',unit:'kg',start:14,f:1,cue:'Lie on the floor, palms facing each other. Press up. The floor stops your elbows before the shoulder is stretched.',alts:[]},
+   {name:'Band chest press',cue:'Band anchored behind you. Press forward, then return slowly.',alts:[]}],
+ cablerow:[{name:'Single-arm cable row',start:14,f:.45,each:true,cue:'Stand side-on to a cable at chest height. Pull the handle to your side and squeeze your shoulder blade back.'},
+   {name:'Bent-over dumbbell row',gym:0,start:14,f:.45,cue:'Soft knees, hinge forward with a flat back, dumbbells hanging. Pull both toward your hips and squeeze your shoulder blades together.',alts:[{for:'back',name:'Chest-supported row',start:12,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.'}]}],
+ thrust:[{name:'Glute bridge',start:10,f:.6,cue:'On your back, feet flat, dumbbell on the hips. Drive the hips up and pause for a second.',alts:[]},
+   {name:'Single-leg glute bridge',unit:'bw',each:true,cue:'On your back with one foot on the floor and the other knee pulled in. Drive your hips up through the planted heel.'}],
+ pallof:[{name:'Half-kneeling Pallof press',cue:'Kneel on one knee side-on to a band or cable. Press it straight out and don\u2019t let it twist you.'},
+   {name:'Band woodchop',cue:'Stand side-on to a band anchored high. With straight arms, pull it slowly down across your body to the opposite hip, turning through your trunk.'}],
+ lateral:[{name:'Partial lateral raise',start:3,f:.8,cue:'Raise light dumbbells to 45 degrees only, then lower slowly.',alts:[]},
+   {name:'Cable lateral raise',gym:1,start:3,f:.6,each:true,cue:'Stand side-on to a low cable and raise the handle out to shoulder height.',alts:[]}],
+ backext:[{name:'Floor back extension',gym:0,cue:'Lie face down with your arms by your sides. Lift your chest a few centimetres, hold two seconds and lower.'},
+   {name:'Bird dog',gym:0,cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds.',alts:[]}],
+ calf:[{name:'Two-leg calf raise',each:false,cue:'Both feet on the floor. Rise slowly and take three seconds to lower.',alts:[]},
+   {name:'Calf raise on a step',each:false,cue:'Balls of your feet on a step, heels hanging. Rise up, then lower your heels below the step slowly. Hold a rail.',alts:[]}]};
+const blockNo=()=>state.history.length?Math.floor((trainingWeek()-1)/6):0;
+function pool(ex){ return [{...ex,slotId:ex.id,f:1,_pi:0},...(VAR[ex.id]||[]).map((v,k)=>({...ex,...v,alts:(v.alts||ex.alts).filter(a=>a.name!==v.name),slotId:ex.id,_pi:k+1}))]; }
+function usable(ex){ const H=state.hidden||[], home=state.equip==='home'; return pool(ex).filter(p=>!H.includes(p.name)&&!(home&&p.gym&&!p.alts.some(a=>a.for==='home'))); }
+function baseFor(ex){ const P=pool(ex), ok=usable(ex); if(P.length===1) return P[0]; if(!ok.length) return P[0];
+  const pick=(state.variety||{})[ex.id], b=blockNo();
+  if(pick&&pick.block===b){ const c=ok.find(p=>p._pi===pick.i); if(c) return c; }
+  const want=P[b%P.length]; return ok.find(p=>p._pi===want._pi)||ok[0]; }
+function findSlot(id){ for(const s of ORDER){ const e=PROGRAM[s].ex.find(x=>x.id===id); if(e) return e; } return null; }
+function relLast(ex){ const o=findSlot(ex.slotId); if(!o) return null;
+  for(const p of pool(o)){ if(p.name===ex.name||!(p.unit==='kg'||p.unit==='m')) continue; const L=state.last[p.name]; if(L&&L.w>0) return {w:L.w,u:L.u,name:p.name,f:(ex.f||.8)/(p.f||1)}; }
+  return null; }
+function newInBlock(){ if(!blockNo()) return 0; const names=new Set(); ORDER.forEach(s=>exFor(s).forEach(e=>{ if(pool(e).length>1){ const r=resolve(e); if(!r.alt) names.add(r.name); } })); return names.size; }
 
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
@@ -517,6 +640,7 @@ function recovery(){
   return {last:l, days, doneToday:days===0, ready:days>=2, next:nextLetter(l.s), nextDate:Math.max(T0,l.d+2*DAY)};
 }
 function resolve(ex){
+  ex=baseFor(ex);
   let idx=state.swaps[ex.id], auto=false, ck=false;
   const home=state.equip==='home', sore=(state.player&&state.player.sore)||{}, ok=a=>!(home&&a.gym);
   if(idx===undefined){ idx=-1;
@@ -525,10 +649,12 @@ function resolve(ex){
   if(idx>-1&&ex.alts[idx]) return {...ex,...ex.alts[idx],alt:true,auto,ck,altFor:ex.alts[idx].for,unit:ex.alts[idx].unit||ex.unit};
   return {...ex,alt:false};
 }
-const exFor = s=>PROGRAM[s].ex.filter(e=>!e.min||state.length>=e.min);
+const curLen=()=>(state.player&&state.player.len)||state.length;
+const exFor = s=>PROGRAM[s].ex.filter(e=>!e.min||curLen()>=e.min);
 let LIGHT=false;
-const setsFor = ex=>{const n= state.length===20 ? Math.min(ex.sets,2) : (state.length>=45&&ex.unit==='kg'&&!ex.min) ? ex.sets+1 : ex.sets; return LIGHT?Math.min(n,2):n};
-const restFor = ex=> Math.round(ex.rest*({20:.8,30:1,45:1.25,60:1.4}[state.length]||1)/5)*5;
+const STRONG=()=>{const P=state.player; return !!(P&&P.strong&&!P.light&&!P.deload&&!P.back)};
+const setsFor = ex=>{const L=curLen(), n= L===20 ? Math.min(ex.sets,2) : (L>=45&&ex.unit==='kg'&&!ex.min) ? ex.sets+1 : ex.sets; if(LIGHT) return Math.min(n,2); return STRONG()&&ex.unit==='kg'&&!ex.min&&L!==20?Math.min(n+1,4):n};
+const restFor = ex=> Math.round(ex.rest*({20:.8,30:1,45:1.25,60:1.4}[curLen()]||1)*(state.player&&state.player.calm?1.2:1)/5)*5;
 const LENGTHS = {20:'Two sets per exercise and shorter rests. Enough to keep and build muscle.',
   30:'The standard program. Three sets on the main lifts.',
   45:'An extra set on the main lifts, longer rests for heavier work, and two extra exercises for arms, shoulders and core.',
@@ -549,13 +675,16 @@ function convW(w,from,to,step){ if(!w||from===to) return w; const v=from==='kg'?
 const fmtKg=kg=>U()==='lb'?`${Math.round(kg*2.20462/5)*5} lb`:`${kg} kg`;
 function suggest(ex){
   if(ex.unit==='min') return {w:0,r:ex.hi,text:state.hrMed?'Easy pace: about 4 to 5 out of 10 effort. You should be able to talk in full sentences.':`Easy pace. Aim for a pulse between ${Math.round(maxHR()*.6)} and ${Math.round(maxHR()*.7)} bpm.`};
-  const L0=state.last[ex.name], step=stepFor(ex), u=U(), st=convW(ex.start||0,'kg',u,step);
+  const L0=state.last[ex.name], step=stepFor(ex), u=U(), REL=!L0&&ex.slotId&&(ex.unit==='kg'||ex.unit==='m')?relLast(ex):null,
+    st=REL?Math.max(step,Math.round(convW(REL.w,REL.u||'kg',u,step)*REL.f/step)*step):convW(ex.start||0,'kg',u,step);
   const L=L0&&{...L0,w:convW(L0.w,L0.u||'kg',u,step)};
+  if(!L&&REL) return {w:st,r:ex.hi,text:`New exercise this block. Based on your ${REL.name}, start at ${st} ${u}${ex.unit==='m'?' per hand':''} and adjust after the first set.`};
   if(!L) return {w:st,r:ex.hi,text: ex.unit==='kg'||ex.unit==='m' ? `First time. Start at ${st} ${u}${ex.unit==='m'?' per hand':''} and pick a weight you could lift 2–3 more times.` : 'First time. Move slowly and stop 2–3 reps short of your limit.'};
   const all=L.r.every(x=>x>=ex.hi); const tot=L.r.reduce((a,b)=>a+b,0);
   const P=state.player;
   if((ex.unit==='kg'||ex.unit==='m')&&P&&(P.back||P.deload)){const f=P.back?.85:.8, w=Math.max(step,Math.round(L.w*f/step)*step);
     return {w,r:ex.lo,text:P.back?`Welcome back. After a break, start at ${w} ${u}, about 15% lighter than last time, and build up again.`:`Lighter week: ${w} ${u}, about 20% less than usual. Joints and tendons catch up, and you come back stronger.`};}
+  if((ex.unit==='kg'||ex.unit==='m')&&STRONG()&&!all&&L.r.every(x=>x>=ex.hi-1)) return {w:L.w+step,r:ex.lo,text:`Feeling strong: try ${L.w+step} ${u}, one step up from last time. Drop back if your form slips.`};
   if((ex.unit==='kg'||ex.unit==='m')&&LIGHT) return {w:L.w,r:ex.lo,text:`Light day: stay at ${L.w} ${u} and stop 2\u20133 reps short. Save the extra weight for your next full training.`};
   if(ex.unit==='kg'||ex.unit==='m'){
     if(all) return {w:L.w+step,r:ex.lo,text:`You hit the top of the range on every set last time. Go up to ${L.w+step} ${u}.`};
@@ -630,6 +759,15 @@ ANIM['Brisk walk']={p:{},loop:1,f:walk(16,[8,50])};
 ANIM['Neutral-grip pulldown']=ANIM['Lat pulldown'];
 ANIM['Band pulldown']={...ANIM['Lat pulldown'],p:{box:[92,126,34,39],cable:[114,-18,1]}};
 ANIM['Band pushdown']={...ANIM['Triceps pushdown'],p:{cable:[152,-18,1]}};
+ANIM['Bent-over dumbbell row']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],an:[124,165],af:[118,165]},{hip:[106,86],t:112,hn:[-18,26],an:[124,165],af:[118,165]}]};
+ANIM['Dumbbell reverse fly']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],an:[124,165],af:[118,165]},{hip:[106,86],t:112,hn:[8,10],an:[124,165],af:[118,165]}]};
+ANIM['Farmer march']={p:{db:'both'},f:[{hip:[120,87],t:180,hn:[18,46],an:[140,134],af:[118,165]},{hip:[120,87],t:180,hn:[-8,48],an:[124,165],af:[136,136]}]};
+[['Alternating dumbbell bench press','Dumbbell bench press'],['Close-grip dumbbell press','Dumbbell bench press'],
+ ['Band biceps curl','Dumbbell biceps curl'],['Band pull-apart','Band face pull'],['Band row','Band seated row'],['Single-leg stand, eyes closed','Single-leg stand'],['Kettlebell deadlift','Romanian deadlift'],
+ ['Single-leg Romanian deadlift','Romanian deadlift'],['Single-arm cable pulldown','Lat pulldown'],['Arnold press','Seated shoulder press'],['Half-kneeling one-arm press','Seated shoulder press'],
+ ['Reverse lunge','Split squat'],['Lateral lunge','Split squat'],['Close-grip push-up','Incline push-up'],['Side plank on knees','Side plank'],['Heel-to-toe walk backwards','Heel-to-toe walk'],
+ ['Lateral step-up','Dumbbell step-up'],['Step-down','Low step-up'],['Single-arm cable row','Seated cable row'],['Single-leg glute bridge','Glute bridge'],['Half-kneeling Pallof press','Pallof press'],['Band woodchop','Pallof press'],
+ ['Cable lateral raise','Lateral raise'],['Calf raise on a step','Two-leg calf raise'],['Floor back extension','Back extension']].forEach(([a,b])=>{ if(!ANIM[a]&&ANIM[b]) ANIM[a]=ANIM[b]; });
 
 const rad=a=>a*Math.PI/180, dirA=a=>[Math.sin(rad(a)),Math.cos(rad(a))];
 function ik(A,C,l1,l2,bend){
@@ -887,6 +1025,7 @@ function viewTodayInner(){
   const list=exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button>${r.alt?`<span class="pill">${JOINT[r.altFor]}</span>`:''}</div><span class="sr num">${repLabel(r)}</span></li>`}).join('');
   const doneN=wk.done.length;
   const banner=(isWelcomeBack()&&(today||!upcoming)?`<p class="coach rest"><b>Welcome back.</b> It\u2019s been ${rec.days} days. Your next training starts about 15% lighter, so joints and tendons can catch up.</p>`:'')
+    +(newInBlock()&&trainingWeek()%6===1?`<p class="coach"><b>New block: ${newInBlock()} fresh exercises.</b> Same muscles, new movements, and weights start from what you lift now.</p>`:'')
     +(isDeloadWeek()?`<p class="coach rest"><b>Lighter week</b> (week ${trainingWeek()}). Same exercises at about 20% less weight. Every sixth week is lighter, so you keep progressing without wearing down.</p>`:'');
   return `
   <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}${banner}</div>
@@ -1017,7 +1156,7 @@ function viewWelcome(){
     <div class="promise">${ic('<path d="M4 19V9M10 19V5M16 19v-8M22 19H2"/>')}<div><h3>Numbers that matter</h3><p class="muted">Fitness, resting pulse and strength, compared with men your age, never with 25-year-olds.</p></div></div>
     <div class="promise">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}<div><h3>20 to 60 minutes</h3><p class="muted">Pick the length that fits your week. A short session done beats a long one skipped.</p></div></div>
   </div>
-  <div class="card stack"><h3>Every exercise, shown</h3><p class="muted small">Animated demos for all 45 exercises, plus the safer versions for knees, shoulders and back.</p>
+  <div class="card stack"><h3>Every exercise, shown</h3><p class="muted small">Animated demos for every exercise, plus the safer versions for knees, shoulders and back.</p>
     <button class="demo" data-act="toggleanim" aria-label="Animated exercises. Tap to pause."><svg viewBox="0 -22 240 192" data-anim="Farmer carry" data-cycle="Farmer carry|Goblet squat|Romanian deadlift|Lateral raise|Dumbbell step-up|Hip thrust" role="img"></svg><span class="demo-state">Farmer carry</span></button></div>
   <p class="fact">After 50, men lose muscle faster every year. Strength training is the most effective way to slow it down.<small>That\u2019s why every Jarl session is built around lifting, not steps.</small></p>
   <button class="btn primary" data-act="welcome-go">Build my plan</button>
@@ -1027,13 +1166,14 @@ function viewProgram(){
   const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
   const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
   return `
-  <div class="stack"><span class="eyebrow">Your program</span><h1>Three full-body sessions a week</h1>
+  <div class="stack"><span class="eyebrow">Your program \u00b7 Block ${blockNo()+1}</span><h1>Three full-body sessions a week</h1>
   <p>Every session trains the whole body, so missing one day never leaves a muscle group behind. Keep at least one rest day between sessions.</p></div>
   <div class="card stack"><h3>How it works</h3>
     <ol class="stack" style="margin:0;padding-left:1.2em">
       <li>Two to three sets per exercise. Stop each set with 1–2 reps left.</li>
       <li>Hit the top of the rep range on every set, and the app adds weight next time.</li>
       <li>Every sixth week is lighter: same exercises, about 20% less weight. Joints and tendons catch up.</li>
+      <li>After each lighter week, a new block brings fresh exercises for the same muscles. Tap Swap exercise to try another one sooner.</li>
       <li>Each session ends with balance work. It’s the best protection against falls.</li>
     </ol></div>
   ${sessions}`;
@@ -1147,6 +1287,8 @@ function viewProfile(){
   <div class="card stack"><h3>Text size</h3>${seg('textSize',[['m','Normal'],['l','Large'],['xl','Extra large']])}<p class="muted small">Larger text is easier to read at arm\u2019s length in the gym.</p></div>
   <div class="card stack"><h3>Equipment</h3>${seg('equip',[['gym','Gym'],['home','Home']])}<p class="muted small">${state.equip==='home'?'Dumbbells, a bench or sturdy chair, and a resistance band. Machine exercises are swapped for band and dumbbell versions automatically.':'A gym with dumbbells, benches, cables and machines.'}</p></div>
   <div class="card stack"><h3>Warm-up</h3>${seg('warm',[[3,'3 min'],[5,'5 min']])}<p class="muted small">Five minutes is better on cold mornings or stiff days.</p></div>
+  <div class="card"><label class="switch" for="aiopt"><span><b>AI coach</b><br><span class="muted small">${COACH.ok?'Reads what you tell your coach and suggests a session, on your iPhone with Apple Intelligence. Nothing leaves your phone.':NATIVE?(COACH.reason==='off'?'Turn on Apple Intelligence in the iPhone Settings app to use the AI coach. Jarl works the same without it.':'Needs an iPhone 15 Pro or newer with Apple Intelligence. Jarl works the same without it.'):'In the iPhone app, Apple Intelligence can read what you tell your coach on supported iPhones. This preview uses Jarl\u2019s own rules.'}</span></span><input type="checkbox" id="aiopt" data-pref="ai" ${state.ai!==false?'checked':''} ${COACH.ok?'':'disabled'}></label></div>
+  ${(state.hidden||[]).length?`<div class="card stack"><h3>Hidden exercises</h3><p class="muted small">Jarl won\u2019t show these. Tap one to bring it back.</p><div class="row" style="flex-wrap:wrap;gap:8px">${state.hidden.map(n=>`<button class="pill plain" data-act="vunhide" data-n="${esc(n)}" style="padding:8px 12px;font-size:.85rem">${esc(n)} \u00d7</button>`).join('')}</div></div>`:''}
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
@@ -1168,16 +1310,29 @@ const TIPS=['Protein helps muscle repair. Include some with every meal: fish, eg
  'Stiff in the morning? The 8-minute mobility routine is a good start to the day.',
  'Balance work protects against falls. Try standing on one leg while you brush your teeth.'];
 let CK={};
-function checkinSheet(s){
-  CK={knee:false,shoulder:false,back:false,tired:false};
-  const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="false"><b>${t}</b><span class="muted small">${d}</span></button>`;
-  sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How do you feel today?</h2><p class="muted">Tap anything that\u2019s sore or stiff. Jarl adjusts today\u2019s training only.</p>
-   <div class="ckgrid">${o('knee','Knees','Knee-friendly versions today')}${o('shoulder','Shoulders','Shoulder-friendly versions today')}${o('back','Lower back','Back-friendly versions today')}${o('tired','Tired or slept badly','Light day: two sets per exercise')}</div>
+function checkinSheet(s,preset){
+  CK={knee:false,shoulder:false,back:false,tired:false,strong:false,calm:false,short:false};
+  if(preset) Object.assign(CK,preset);
+  const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="${!!CK[k]}"><b>${t}</b><span class="muted small">${d}</span></button>`;
+  sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How do you feel today?</h2><p class="muted">Tap anything that fits. Jarl adjusts today\u2019s training only.</p>
+   <label for="mood-text" class="small"><b>Anything else? Tell your coach</b></label>
+   <textarea id="mood-text" class="ta" rows="3" placeholder="For example: anxious about work, slept OK, a bit achy in the hips, but I want to move"></textarea>
+   <button class="btn ghost" data-act="moodgo" data-s="${s}">Suggest my session</button>
+   <h3>Or tap what fits</h3>
+   <div class="stack">${o('strong','Feeling strong','An extra set on the main lifts, and a step up where you\u2019re close')}${o('tired','Tired or slept badly','Light day: two sets per exercise')}${o('calm','Stressed or low','Calmer session: longer rests, slow breathing at the end')}${o('short','Short on time','The 20-minute version')}</div>
+   <h3>Sore or stiff</h3>
+   <div class="ckgrid">${o('knee','Knees','Knee-friendly versions')}${o('shoulder','Shoulders','Shoulder-friendly versions')}${o('back','Lower back','Back-friendly versions')}</div>
    <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
    <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
 }
+function coachNote(P){ const n=[];
+  if(P.calm) n.push('Calmer session today: longer rests, and two minutes of slow breathing at the end. Moving at all is a win.');
+  else if(P.light&&P.tiredCk) n.push('Light day: two sets per exercise at last time\u2019s weights. Showing up is what counts.');
+  if(STRONG()) n.push('Feeling strong: one extra set on the main lifts, and a step up where you were close to the top last time. Keep your form clean.');
+  if(P.len) n.push('Short version: about 20 minutes.');
+  return n.length?`<p class="coach rest">${n.join(' ')}</p>`:'';}
 function startSession(s,ck={}){
-  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&pulseOn(),lastHrAt:0,hrSrc:'',light:isLightToday()||!!ck.tired,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
+  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&pulseOn(),lastHrAt:0,hrSrc:'',light:isLightToday()||!!ck.tired,tiredCk:!!ck.tired,strong:!!ck.strong&&!ck.tired,calm:!!ck.calm,len:ck.short?20:0,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
   if(state.player.real){ state.player.hr=null;
     if(state.health.connected) nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{});
     if(state.hrdev) nat('JarlHR','connect',{id:state.hrdev.id}).catch(()=>{}); }
@@ -1218,7 +1373,7 @@ function renderPlayerInner(){
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
    <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':pulseOn()?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
-   <div class="pwrap">${P.real&&!state.hrMed?`<p class="hint" id="hrwait" hidden>${state.hrdev?`<b>No pulse from ${esc(state.hrdev.name)} yet.</b> Check that it\u2019s on and close by. On a Garmin, turn on <b>Broadcast Heart Rate</b>.`:`<b>No live pulse.</b> An Apple Watch sends live pulse during a <b>Traditional Strength Training</b> workout. A Garmin sends pulse to Apple Health only after the workout. For live Garmin pulse, turn on <b>Broadcast Heart Rate</b> on the watch and connect it under <b>You</b>, then <b>Heart rate</b>.`} Until then, rest is guided by time and breathing.</p>`:''}${warm}${items}
+   <div class="pwrap">${coachNote(P)}${P.real&&!state.hrMed?`<p class="hint" id="hrwait" hidden>${state.hrdev?`<b>No pulse from ${esc(state.hrdev.name)} yet.</b> Check that it\u2019s on and close by. On a Garmin, turn on <b>Broadcast Heart Rate</b>.`:`<b>No live pulse.</b> An Apple Watch sends live pulse during a <b>Traditional Strength Training</b> workout. A Garmin sends pulse to Apple Health only after the workout. For live Garmin pulse, turn on <b>Broadcast Heart Rate</b> on the watch and connect it under <b>You</b>, then <b>Heart rate</b>.`} Until then, rest is guided by time and breathing.</p>`:''}${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
 }
@@ -1274,10 +1429,11 @@ async function completeSession(effort){
     hard:'Next time the weights drop by about 10%. If a joint hurt, use Swap for that exercise. See a doctor if pain lasts more than a few days.'}[effort];
   const hl=P.hrLog, avg=hl.length?Math.round(hl.reduce((a,b)=>a+b,0)/hl.length):0, peak=hl.length?Math.round(Math.max(...hl)):0;
   const hrLine=!state.hrMed&&pulseOn()&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
-  const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
+  const s=P.s, calm=!!P.calm; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
   sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
    <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/${Math.max(weekPlan().days.length,weekPlan().done.length)}</b></div></div>
    ${hrLine}
+   ${calm?'<p class="breath"><b>Two minutes of slow breathing now.</b> Sit or lie down. Breathe in through your nose for 4, out for 6. Let your shoulders drop.</p>':''}
    <p class="coach">${msg}</p>
    <p class="hint"><b>Tip:</b> ${TIPS[(state.history.length-1+TIPS.length)%TIPS.length]}</p>
    <p class="coach rest">Tomorrow is a rest day. A 30-minute walk counts. Next training: <b>${fmtDay(nextTraining())}</b>.</p>
@@ -1286,14 +1442,19 @@ async function completeSession(effort){
 }
 
 /* ---------- Sheets ---------- */
-function sheet(html){const s=$('#sheet'); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
+function sheet(html,center){const s=$('#sheet'); s.classList.toggle('center',!!center); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
 function closeSheet(){if(typeof mobStop==='function')mobStop(); if($('#sheet .blelist')&&NATIVE) nat('JarlHR','stopScan',{}).catch(()=>{});$('#sheet').hidden=true; $('#sheet').innerHTML='';}
 function swapSheet(i){
-  const P=state.player, e=exFor(P?P.s:currentS())[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
-  if(!e.alts.length){sheet(`<h2>${e.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
-  sheet(`<h2>Swap ${e.name.toLowerCase()}</h2><p class="muted">Same muscles, different stress on the joints.</p>
-   <button class="opt" data-act="pick" data-i="${i}" data-a="-1" aria-pressed="${curIdx===-1}"><b>${e.name}</b><span class="muted small">Standard version</span></button>
-   ${e.alts.map((a,k)=>`<button class="opt" data-act="pick" data-i="${i}" data-a="${k}" aria-pressed="${curIdx===k}"><span class="row between"><b>${a.name}</b><span class="pill">${JOINT[a.for]}</span></span><span class="small">${a.cue}</span></button>`).join('')}
+  const P=state.player, e=exFor(P?P.s:currentS())[i], b=baseFor(e), cur=resolve(e), curIdx=cur.alt?b.alts.findIndex(a=>a.name===cur.name):-1;
+  const others=usable(e).filter(p=>p.name!==b.name), canHide=usable(e).length>1;
+  if(!b.alts.length&&!others.length){sheet(`<h2>${b.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
+  sheet(`<h2>Swap ${b.name.toLowerCase()}</h2>
+   ${b.alts.length?`<h3>Joint-friendly versions</h3><p class="muted small">Same muscles, different stress on the joints.</p>
+   <button class="opt" data-act="pick" data-i="${i}" data-a="-1" aria-pressed="${curIdx===-1}"><b>${b.name}</b><span class="muted small">Standard version</span></button>
+   ${b.alts.map((a,k)=>`<button class="opt" data-act="pick" data-i="${i}" data-a="${k}" aria-pressed="${curIdx===k}"><span class="row between"><b>${a.name}</b><span class="pill">${JOINT[a.for]}</span></span><span class="small">${a.cue}</span></button>`).join('')}`:''}
+   ${others.length?`<h3>Try something different</h3><p class="muted small">Other exercises for the same muscles. Your choice stays until the next block.</p>
+   ${others.map(o=>`<button class="opt" data-act="vpick" data-i="${i}" data-v="${o._pi}"><b>${o.name}</b><span class="small">${o.cue}</span></button>`).join('')}`:''}
+   ${canHide?`<button class="btn link" style="align-self:flex-start;color:var(--muted)" data-act="vhide" data-i="${i}">Don\u2019t show me ${b.name.toLowerCase()} again</button>`:''}
    <button class="btn ghost" data-act="closesheet">Cancel</button>`);
 }
 let mob={i:-1,timer:null,left:0,side:1};
@@ -1336,6 +1497,7 @@ function mobTimer(){
 const WIDE=window.matchMedia('(min-width: 700px)');
 try{WIDE.addEventListener('change',()=>{ if(state.player) renderPlayer(); render(); })}catch(e){}
 function render(){
+  if(state.swapsBlock!==blockNo()){ state.swaps={}; state.swapsBlock=blockNo(); save(); }
   document.documentElement.dataset.scheme=state.scheme;
   document.documentElement.style.fontSize=(({m:100,l:112.5,xl:125}[state.textSize]||100)*(WIDE.matches?1.3:1))+'%';
   $('.tabs').hidden=state.welcome;
@@ -1354,7 +1516,16 @@ document.addEventListener('click',ev=>{
   const P=state.player, a=t.dataset.act;
   switch(a){
     case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} gateStart(t.dataset.s); break;
-    case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k])); break;}
+    case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k]));
+      const off=k==='strong'&&CK[k]?['tired']:k==='tired'&&CK[k]?['strong']:[];
+      off.forEach(x=>{CK[x]=false; const b=document.querySelector(`[data-act="ck"][data-k="${x}"]`); if(b) b.setAttribute('aria-pressed','false');}); break;}
+    case 'moodgo': moodGo(t.dataset.s); break;
+    case 'moodstart': {const ck={...MOOD.ck}; closeSheet(); startSession(t.dataset.s,ck); break;}
+    case 'moodedit': checkinSheet(t.dataset.s,MOOD?MOOD.ck:null); break;
+    case 'moodmob': mobilitySheet(); break;
+    case 'vpick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.variety=state.variety||{}; state.variety[e.id]={i:+t.dataset.v,block:blockNo()}; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
+    case 'vhide': {const e=exFor(P?P.s:currentS())[+t.dataset.i], n=baseFor(e).name; state.hidden=[...new Set([...(state.hidden||[]),n])]; if(state.variety) delete state.variety[e.id]; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
+    case 'vunhide': state.hidden=(state.hidden||[]).filter(x=>x!==t.dataset.n); save(); render(); break;
     case 'ckstart': {const ck=t.dataset.allgood?{}:{...CK}; closeSheet(); startSession(t.dataset.s,ck); break;}
     case 'mobility': mobilitySheet(); break;
     case 'mob': mobilitySheet(+t.dataset.i); break;
