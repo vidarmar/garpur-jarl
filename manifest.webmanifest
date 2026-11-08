@@ -1,7 +1,7 @@
 {
  "name": "Jarl: Strength after 50",
  "short_name": "Jarl",
- "start_url": ".",
+ "start_url": "app.html",
  "display": "standalone",
  "background_color": "#ECEEEE",
  "theme_color": "#16344C",
