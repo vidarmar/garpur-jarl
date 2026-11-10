@@ -283,7 +283,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='3.0', APP_DATE='8 Nov 2026';
+const APP_VERSION='3.1', APP_DATE='10 Nov 2026';
 const DAY = 864e5;
 const today0=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
 let T0 = today0();
@@ -379,7 +379,16 @@ const PROGRAM = {
      alts:[{for:'knee',gym:1,name:'Rower or arm bike',cue:'Rowing and arm cycling keep your heart working with little load on the knees.'},{for:'home',name:'Brisk walk',cue:'Walk outdoors at a pace where you can talk but not sing. Swing your arms. Finish with two minutes of slow walking.'}]}
   ]}
 };
-const ORDER = ['A','B','C'];
+// Trainings 4–6 reuse exercises from 1–3 in new combinations, so weights, swaps and blocks carry over.
+(function(){ const by=(s,id)=>PROGRAM[s].ex.find(e=>e.id===id);
+  const mk=(focus,list)=>({focus,ex:list.map(([s,id])=>by(s,id)).filter(Boolean)});
+  PROGRAM.D=mk('Squat, pull, press, glutes',[['A','goblet'],['B','pulldown'],['B','ohp'],['C','thrust'],['B','deadbug'],['A','curl'],['A','stand'],['A','z2']]);
+  PROGRAM.E=mk('Lunge, push, row, hinge',[['B','split'],['A','bench'],['C','cablerow'],['B','rdl'],['C','pallof'],['C','lateral'],['A','stand'],['B','z2']]);
+  PROGRAM.F=mk('Step, push, pull, carry',[['C','stepup'],['C','pushup'],['A','row'],['A','carry'],['B','sideplank'],['C','backext'],['B','tandem'],['C','z2']]);
+})();
+const ORDER = ['A','B','C','D','E','F'];
+// The trainings in use: one per chosen day, at least three (2 days a week rotate through 1–3).
+const activeOrder = ()=>ORDER.slice(0,Math.min(6,Math.max(3,(state.days||[]).length)));
 const JOINT = {knee:'Knee-friendly',shoulder:'Shoulder-friendly',back:'Back-friendly',home:'Home option'};
 const GROUPS = ['Heart','Chest','Back','Shoulders','Arms','Quads','Hamstrings','Glutes','Calves','Core','Grip','Balance'];
 const MOBILITY = [
@@ -523,6 +532,135 @@ function redSheet(){ sheet(`<span class="eyebrow">Please stop for now</span><h2>
 // AI text is shown only if it is short and stays clear of medical topics. Otherwise Jarl's own text is used.
 const BAD=/diagnos|prescri|dosage|\bdose\b|hormone|testosterone|\btrt\b|prostate|blood pressure|statin|viagra|cholesterol|\bcure|\btreat|medication|!|#/i;
 function cleanAI(t,max){ if(typeof t!=='string') return null; t=t.replace(/\s+/g,' ').trim().replace(/^["\u201c']+|["\u201d']+$/g,''); if(t.length<8||t.length>max||BAD.test(t)) return null; return t; }
+
+/* ---------- Coach features with Apple Intelligence (from VitalHer). Jarl's own rules decide every session; the model only writes short texts or reads free text into fields the rules check. ---------- */
+/* 1. Coach note before the session */
+function noteFacts(P){ const f=[`Session: ${TN(P.s)}, about ${minutes(P.s)} minutes.`];
+  if(P.calm) f.push('He feels stressed or low, so rests are longer and the session ends with slow breathing.');
+  else if(P.tiredCk) f.push('He reported low energy or poor sleep, so today is a light day: two sets per exercise at last time’s weights.');
+  else if(P.light) f.push('He trained yesterday, so today is a light day: two sets per exercise at the same weights.');
+  if(P.strong&&!P.light) f.push('He feels strong today, so the main lifts get one extra set, and the weight goes up a step where he was close to the top of the range last time.');
+  if(P.len) f.push('He is short on time, so this is the 20-minute version.');
+  const sore=['knee','shoulder','back'].filter(j=>P.sore[j]); if(sore.length) f.push(`Gentler versions are swapped in for his ${sore.join(' and ').replace('back','lower back')}.`);
+  if(P.back) f.push('He is coming back after a break of ten days or more, so weights start about 15% lighter.');
+  else if(P.deload) f.push('This is a planned lighter week with about 20% less weight.');
+  if(f.length===1) f.push('Nothing was adjusted today. He says he feels fine.');
+  return f.join('\n'); }
+function askNote(){ const P=state.player; if(!P||!aiOn()) return;
+  withTimeout(nat('JarlCoach','note',{facts:noteFacts(P)}),15000).then(r=>{ const t=cleanAI(r&&r.text,320); if(t&&state.player===P){ P.aiNote=t; renderPlayer(); } }).catch(()=>{}); }
+
+/* 2. "Something hurts?" swap helper during the session */
+function readJoint(t){ const s=t.toLowerCase(); return /knee/.test(s)?'knee':/shoulder|elbow|neck|\barm/.test(s)?'shoulder':/back|spine|\bhip|sciatic/.test(s)?'back':''; }
+function hurtSheet(i,msg){ const P=state.player, r=resolve(exFor(P.s)[i]);
+  sheet(`<span class="eyebrow">${esc(r.name)}</span><h2>What’s bothering you?</h2>
+   ${msg?`<p class="small" style="color:var(--warn)"><b>${msg}</b></p>`:''}
+   <p class="muted">Tell Jarl in your own words, or tap an area. It swaps in gentler versions for the rest of today.</p>
+   <label for="hurt-text" class="small"><b>In your own words</b></label>
+   <textarea id="hurt-text" class="ta" rows="3" placeholder="For example: my left knee aches at the bottom of the squat"></textarea>
+   <label for="hurt-level" class="small"><b>How much does it hurt?</b> <span class="num" id="hurt-lv">4</span> out of 10</label>
+   <input type="range" id="hurt-level" min="0" max="10" step="1" value="4" style="width:100%;accent-color:var(--accent)" oninput="document.getElementById('hurt-lv').textContent=this.value">
+   <div class="bandlbl"><span>0–3 lighter weight</span><span>4–6 swap</span><span>7–10 skip</span></div>
+   <button class="btn primary" data-act="hurtgo" data-i="${i}">Find a gentler version</button>
+   <div class="ckgrid">${Object.keys(AREA).map(j=>`<button class="opt" data-act="hurtpick" data-i="${i}" data-j="${j}"><b>${AREA[j]}</b></button>`).join('')}</div>
+   <p class="muted small">Sharp pain is a signal to stop that exercise. If pain lasts more than a few days, see a doctor or physiotherapist.</p>
+   <button class="btn ghost" data-act="closesheet">Cancel</button>`); }
+function hurtLevel(){ const el=$('#hurt-level'); return el?+el.value:5; }
+async function hurtGo(i){ const P=state.player, box=$('#hurt-text'), text=box?box.value.trim():'', level=hurtLevel(); if(!P) return;
+  if(!text) return hurtSheet(i,'Write a few words, or tap an area below.');
+  if(RED.test(text)) return redSheet();
+  const names=exFor(P.s).map(e=>resolve(e).name); let j=readJoint(text), idx=i, reply='', ai=false;
+  if(aiOn()){ sheet('<h2>Finding a gentler version…</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>');
+    try{ const r=await withTimeout(nat('JarlCoach','swap',{text,exercises:names}),15000);
+      if(r&&AREA[r.joint]){ j=r.joint; ai=true; } const k=r?names.indexOf(r.exercise):-1; if(k>-1) idx=k; const c=cleanAI(r&&r.reply,160); if(c){ reply=c; ai=true; } }catch(e){} }
+  if(!j) return hurtSheet(i,'Jarl couldn’t tell which area. Tap one below.');
+  applySore(j,idx,reply,ai,level); }
+function applySore(j,i,reply,ai,level){ const P=state.player; if(!P) return; level=level==null?5:level;
+  const e0=exFor(P.s)[i], r0=resolve(e0);
+  if(level<=3){ if(r0.unit==='kg'||r0.unit==='m'){ const st=stepFor(r0); if(P.idx===i&&P.cur) P.cur.w=Math.max(st,Math.round(P.cur.w*.8/st)*st); }
+    sheet(`<span class="eyebrow">Mild: ${level} out of 10</span><h2>Keep going, a little lighter</h2><p>Stay with <b>${esc(r0.name)}</b>${r0.unit==='kg'||r0.unit==='m'?' with about 20% less weight':''}, and move slowly through the part that pinches. Stop if it gets worse.</p>
+     ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}<button class="btn primary" data-act="hurtback" data-i="${i}">Back to training</button>`); return; }
+  P.sore[j]=true;
+  exFor(P.s).forEach(e=>{ if(baseFor(e).alts.some(a=>a.for===j)) delete state.swaps[e.id]; }); save();
+  const e=exFor(P.s)[i], r=resolve(e), n=exFor(P.s).filter(x=>resolve(x).altFor===j).length;
+  const main=r.alt&&r.altFor===j?`<b>${esc(e.name)}</b> is now <b>${esc(r.name)}</b> for the rest of today.`:`There’s no ${AREA[j].toLowerCase()}-friendly version of <b>${esc(r.name)}</b>. Use a lighter weight or skip it today.`;
+  sheet(`<span class="eyebrow">${AREA[j]}-friendly today</span><h2>${level>=7?'Skip it today':'Swapped'}</h2><p>${level>=7?`The rest of today’s session uses ${AREA[j].toLowerCase()}-friendly versions where there are some.`:main}${level<7&&n>1?` ${n} exercises in today’s session now use ${AREA[j].toLowerCase()}-friendly versions.`:''}</p>
+   ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
+   ${level>=7?`<p class="hint"><b>${level} out of 10 is a lot.</b> Skip <b>${esc(r.name)}</b> today. If pain this strong lasts more than a day or two, see a doctor or physiotherapist.</p>`:''}
+   <button class="btn primary" data-act="${level>=7?'hurtskip':'hurtback'}" data-i="${i}">${level>=7?'Skip it and go on':'Back to training'}</button>`); }
+
+/* 3. Monthly summary on the Progress tab */
+let MONTH=null;
+function monthData(){ const since=T0-30*DAY, h=state.history.filter(x=>x.d>=since);
+  const lifts=Object.keys(state.first).filter(n=>state.last[n]&&state.first[n].w&&state.last[n].w>state.first[n].w&&(state.last[n].u||'kg')===(state.first[n].u||'kg'))
+    .map(n=>[n,state.first[n].w,state.last[n].w,state.last[n].u||'kg']).sort((a,b)=>b[2]/b[1]-a[2]/a[1]).slice(0,3);
+  return {n:h.length, perWeek:h.length/30*7, light:h.filter(x=>x.light).length, lifts, planned:state.days.length}; }
+function monthTemplate(m){ if(!m.n) return 'No trainings logged in the last 30 days yet. Your first one starts the story.';
+  let t=`You trained ${m.n} time${m.n>1?'s':''} in the last 30 days, about ${m.perWeek.toFixed(1)} a week${m.light?`, with ${m.light} light day${m.light>1?'s':''} when your body asked for it`:''}.`;
+  if(m.lifts.length) t+=' You got stronger: '+m.lifts.map(l=>`${l[0]} from ${l[1]} to ${l[2]} ${l[3]}`).join(', ')+'.';
+  t+=m.perWeek<2?' Focus for next month: two sessions every week, even short ones.':' Focus for next month: keep the rhythm and let the weights keep climbing.';
+  return t; }
+function monthFacts(m){ const f=[`Trainings in the last 30 days: ${m.n} (about ${m.perWeek.toFixed(1)} per week). Planned days per week: ${m.planned}.`];
+  if(m.light) f.push(`Light days among them: ${m.light}.`);
+  m.lifts.forEach(l=>f.push(`${l[0]}: from ${l[1]} ${l[3]} to ${l[2]} ${l[3]}.`));
+  if(HEALTH.rhr&&HEALTH.rhr.value) f.push(`Latest resting pulse from Apple Health: ${Math.round(HEALTH.rhr.value)} bpm.`);
+  if(HEALTH.vo2&&HEALTH.vo2.value) f.push(`Latest VO2 max from Apple Health: ${HEALTH.vo2.value.toFixed(1)}.`);
+  return f.join('\n'); }
+async function monthGo(){ const m=monthData(); if(!m.n||!aiOn()){ MONTH={text:monthTemplate(m),ai:false}; render(); return; }
+  MONTH={text:'Writing your summary…',ai:false,busy:true}; render();
+  try{ const r=await withTimeout(nat('JarlCoach','summary',{facts:monthFacts(m)}),20000); const t=cleanAI(r&&r.text,700); MONTH=t?{text:t,ai:true}:{text:monthTemplate(m),ai:false}; }
+  catch(e){ MONTH={text:monthTemplate(m),ai:false}; }
+  if(state.tab==='progress'&&!state.player) render(); }
+function monthCard(){ const m=monthData(), M=MONTH||{text:monthTemplate(m),ai:false};
+  return `<div class="card stack"><div class="row between"><h3>Your month in words</h3><span class="pill plain">Last 30 days</span></div>
+   <p>${esc(M.text)}</p>${M.ai?aiTag:''}
+   ${m.n?`<button class="btn ghost" data-act="month" ${M.busy?'disabled':''}>${aiOn()?(M.ai?'Write it again':'Write my summary'):'Update'}</button>`:''}</div>`; }
+
+/* 4. Plan your week in your own words (You tab) */
+let PLAN=null;
+const DAYRX=[/\bmon(day)?s?\b/,/\btue(s|sday)?s?\b/,/\bwed(nesday)?s?\b/,/\bthu(r|rs|rsday)?s?\b/,/\bfri(day)?s?\b/,/\bsat(urday)?s?\b/,/\bsun(day)?s?\b/];
+function parsePlan(t){ const s=t.toLowerCase(), o={days:[],minutes:0,equipment:'unknown',joints:[]};
+  DAYRX.forEach((rx,i)=>{ if(rx.test(s)) o.days.push(i); });
+  if(/\bweekends?\b/.test(s)) [5,6].forEach(d=>{ if(!o.days.includes(d)) o.days.push(d); });
+  if(!o.days.length){ const m=s.match(/\b([2-6]|two|three|four|five|six)\s*(days|times|sessions)/); if(m){ const n={two:2,three:3,four:4,five:5,six:6}[m[1]]||+m[1]; o.days={2:[1,4],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]}[n]||[]; } }
+  const mm=s.match(/(\d{2})\s*(min|mins|minutes)\b/); if(mm) o.minutes=+mm[1]; else if(/half an hour/.test(s)) o.minutes=30; else if(/\ban hour\b|\bone hour\b/.test(s)) o.minutes=60;
+  if(/\bhome\b|garage|basement|dumbbells?|\bbands?\b|kettlebell/.test(s)) o.equipment='home'; if(/\bgym\b/.test(s)) o.equipment='gym';
+  if(/knee/.test(s)) o.joints.push('knee'); if(/shoulder/.test(s)) o.joints.push('shoulder'); if(/lower back|back pain|bad back|my back|sciatica|\bhips?\b/.test(s)) o.joints.push('back');
+  o.days=[...new Set(o.days)].sort((a,b)=>a-b); return o; }
+function mergePlan(a,k){ const days=Array.isArray(a.days)?[...new Set(a.days.map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].sort((x,y)=>x-y):[];
+  const near=v=>[20,30,45,60].reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)?x:b,30);
+  return { days:days.length>=2&&days.length<=6?days:k.days, minutes:a.minutes>0?near(+a.minutes):k.minutes,
+    equipment:['gym','home'].includes(a.equipment)?a.equipment:k.equipment,
+    joints:[...new Set([...(Array.isArray(a.joints)?a.joints:[]).filter(j=>AREA[j]),...k.joints])] }; }
+function planCard(){ return `<div class="card stack"><h3>Plan your week in your own words</h3>
+   <p class="muted small">Write how you’d like to train, and Jarl fills in the settings below for you to check.</p>
+   <label for="plan-text" class="small"><b>In your own words</b></label>
+   <textarea id="plan-text" class="ta" rows="3" placeholder="For example: Monday, Wednesday and Friday, about 45 minutes at the gym. My right knee doesn’t like deep squats."></textarea>
+   <button class="btn primary" data-act="plango">Fill in my plan</button></div>`; }
+async function planGo(){ const box=$('#plan-text'), text=box?box.value.trim():''; if(!text) return;
+  if(RED.test(text)) return redSheet();
+  const k=parsePlan(text); let p=k, ai=false;
+  if(aiOn()){ sheet('<h2>Reading your week…</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>');
+    try{ const r=await withTimeout(nat('JarlCoach','plan',{text}),15000); if(r){ p=mergePlan(r,k); ai=true; } }catch(e){} }
+  PLAN=p; planSheet(ai); }
+function planSheet(ai){ const p=PLAN, rows=[], near=v=>[20,30,45,60].reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)?x:b,30);
+  if(p.days.length>=2&&p.days.length<=6) rows.push(['Training days',p.days.map(d=>DAYNAMES[d]).join(', ')]);
+  else if(p.days.length===1) rows.push(['Training days',`Only ${DAYNAMES[p.days[0]]} found. Jarl needs 2 to 6 days, so your days stay as they are`]);
+  else if(p.days.length>6) rows.push(['Training days','Jarl needs at least one rest day a week, so your days stay as they are']);
+  if(p.minutes) rows.push(['Session length',`${near(p.minutes)} minutes`]);
+  if(p.equipment!=='unknown') rows.push(['Equipment',p.equipment==='home'?'Home':'Gym']);
+  if(p.joints.length) rows.push(['Joints to protect',p.joints.map(j=>AREA[j]).join(', ')]);
+  if(!rows.length){ sheet(`<h2>Nothing to fill in yet</h2><p>Jarl couldn’t find days, a session length or equipment in that. Try naming the days and how long you have, for example: “Monday, Wednesday and Friday, 45 minutes at the gym.”</p><button class="btn ghost" data-act="closesheet">OK</button>`); return; }
+  sheet(`<span class="eyebrow">Your plan</span><h2>Use these settings?</h2>
+   <ul class="perm">${rows.map(r=>`<li><span>${r[0]}</span><span class="small" style="text-align:right"><b>${esc(r[1])}</b></span></li>`).join('')}</ul>
+   ${ai?'<span class="ailabel">Read on your iPhone by Apple Intelligence</span>':''}<p class="muted small">Only the settings listed change. You can adjust any of them below afterwards.</p>
+   <button class="btn primary" data-act="planuse">Use these settings</button>
+   <button class="btn ghost" data-act="closesheet">Cancel</button>`); }
+function planUse(){ const p=PLAN; if(!p) return;
+  if(p.days.length>=2&&p.days.length<=6){ state.days=p.days.slice(); state.weekOverride=null; }
+  if(p.minutes) state.length=[20,30,45,60].reduce((b,x)=>Math.abs(x-p.minutes)<Math.abs(b-p.minutes)?x:b,30);
+  if(p.equipment!=='unknown') state.equip=p.equipment;
+  p.joints.forEach(j=>state.joints[j]=true);
+  Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); PLAN=null; save(); closeSheet(); render(); }
 let MOOD=null;
 const MOODS={
   full:{t:'Your normal session',d:'Sounds like a good day for your planned training.',ck:{}},
@@ -633,9 +771,9 @@ function newInBlock(){ if(!blockNo()) return 0; const names=new Set(); ORDER.for
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
 const short = t=>new Date(t).toLocaleDateString('en-GB',{weekday:'short'});
-const NUM={A:1,B:2,C:3}, TN=s=>`Training day ${NUM[s]}`;
+const NUM={A:1,B:2,C:3,D:4,E:5,F:6}, TN=s=>`Training day ${NUM[s]}`;
 const DAYNAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const nextLetter = s=>ORDER[(ORDER.indexOf(s)+1)%3];
+const nextLetter = s=>{const o=activeOrder(), i=o.indexOf(s); return o[(i+1)%o.length]};
 const lastSession = ()=>state.history.reduce((a,b)=>b.d>a.d?b:a,state.history[0]);
 function recovery(){
   if(!state.history.length) return {last:null, days:99, doneToday:false, ready:true, next:'A', nextDate:T0, first:true};
@@ -985,7 +1123,7 @@ function currentS(){const w=weekPlan(),t=w.plan.find(p=>p.d===T0);return t?t.s:r
 function nextTraining(){const p=weekPlan().plan.find(x=>x.d>T0||(x.d===T0&&!recovery().doneToday)); return p?p.d:MON+7*DAY+Math.min(...state.days)*DAY}
 function dayAdvice(){
   const n=state.days.length, b2b=consecutive(state.days);
-  const lead={2:'<b>2 days a week.</b> Enough to keep your muscle.',3:'<b>3 days a week.</b> Recommended: builds muscle with a rest day between each training.'}[n]||`<b>${n} days a week.</b> Training days 1, 2 and 3 repeat in order.`;
+  const lead={2:'<b>2 days a week.</b> Enough to keep your muscle.',3:'<b>3 days a week.</b> Recommended: builds muscle with a rest day between each training.'}[n]||`<b>${n} days a week.</b> Each day has its own training: Training days 1 to ${n}.`;
   const tail=b2b?' When trainings fall on back-to-back days, every second one becomes a <b>light day</b> automatically: two sets per exercise at the same weights.':(n<=3?' A rest day between each is ideal.':'');
   return `<p class="muted small">${lead}${tail} Pick 2 to 6 days. You can still move a single training on the Today screen.</p>`;
 }
@@ -1044,7 +1182,7 @@ function viewTodayInner(){
     ${cta}
   </div>
   <div class="stack">
-    <div class="row between"><h3>This week</h3><span class="muted small num">${doneN} of ${Math.max(wk.days.length,doneN)} done</span></div>
+    <div class="row between"><h3>This week</h3><span class="muted small num">${doneN} of ${Math.max(doneN+wk.plan.length,doneN)} done</span></div>
     <div class="week">${days}</div>
     <p class="muted small">Tap a planned day to move it. ${doneN>=2?'Two trainings a week keep your muscle, three build it.':'Aim for a rest day between trainings.'} <button class="btn link small" style="min-height:0;padding:0" data-act="gotodays">Change your usual days</button></p>
   </div>
@@ -1170,10 +1308,10 @@ function viewWelcome(){
   <p class="muted small num" style="text-align:center">Version ${APP_VERSION} \u00b7 ${APP_DATE} \u00b7 <button class="btn link small" style="min-height:0;padding:0;font-size:inherit" data-act="terms-view">User Agreement</button></p>`;
 }
 function viewProgram(){
-  const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
-  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
+  const cov=GROUPS.map(g=>`<tr><td>${g}</td>${activeOrder().map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
+  const sessions=activeOrder().map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
   return `
-  <div class="stack"><span class="eyebrow">Your program \u00b7 Block ${blockNo()+1}</span><h1>Three full-body sessions a week</h1>
+  <div class="stack"><span class="eyebrow">Your program \u00b7 Block ${blockNo()+1}</span><h1>${({2:'Two',3:'Three',4:'Four',5:'Five',6:'Six'})[state.days.length]||'Three'} full-body sessions a week</h1>
   <p>Every session trains the whole body, so missing one day never leaves a muscle group behind. Keep at least one rest day between sessions.</p></div>
   <div class="card stack"><h3>How it works</h3>
     <ol class="stack" style="margin:0;padding-left:1.2em">
@@ -1225,6 +1363,7 @@ function viewProgress(){
   <div class="stack"><span class="eyebrow">Progress</span><h1>Three numbers that matter</h1>
   <p>Fitness, heart and habit. Compared with your own past and with men your age, never with 25-year-olds.</p>
   ${conn?'<span class="pill" style="align-self:flex-start">From Apple Health and your training log</span>':''}</div>
+  ${monthCard()}
   ${(()=>{const wk=weekPlan(), done=wk.done, L={}, src=done.length?done:wk.plan; src.forEach(h=>{const t=trainingLoad(h.s); for(const g in t) L[g]=(L[g]||0)+t[g]});
     return `<div class="card stack"><div class="row between"><h2>Muscles this week</h2><span class="pill ${done.length?'':'plain'}">${done.length?`${done.length} training${done.length>1?'s':''} done`:'Planned'}</span></div>
     ${src.length?bodyMap(L,'Muscles this week'):'<p class="muted">No trainings planned this week.</p>'}
@@ -1284,6 +1423,7 @@ function viewProfile(){
     <label class="switch" for="hrmed" style="border-top:1px solid var(--line)"><span><b>I take medication that lowers my heart rate</b><br><span class="muted small">For example beta-blockers. Jarl then uses breathing and effort instead of pulse zones.</span></span><input type="checkbox" id="hrmed" data-pref="hrMed" ${state.hrMed?'checked':''}></label>
     ${state.hrMed?'<p class="muted small" style="padding-top:8px">Pulse zones are switched off. Rest until your breathing has settled, and keep cardio at a pace where you can talk.</p>':''}${state.hrMed?'':`<div style="padding-top:10px">${zoneLegend()}</div>`}<p class="muted small" style="padding-top:8px;${state.hrMed?'display:none':''}">Your estimated max pulse is <b class="num">${maxHR()}</b> bpm (208 \u2212 0.7 \u00d7 age). Jarl suggests your next set when your pulse is back under <b class="num">${readyHR()}</b>.</p>
   </div>
+  ${planCard()}
   <div class="card stack" id="days"><h3>Training days</h3>
     <div class="daychips" role="group" aria-label="Training days">${DAYNAMES.map((d,i)=>`<button data-act="toggleday" data-i="${i}" aria-pressed="${state.days.includes(i)}">${d}</button>`).join('')}</div>
     ${dayAdvice()}
@@ -1332,7 +1472,7 @@ function checkinSheet(s,preset){
    <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
    <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
 }
-function coachNote(P){ const n=[];
+function coachNote(P){ if(P.aiNote) return `<p class="coach rest">${esc(P.aiNote)}${aiTag}</p>`; const n=[];
   if(P.calm) n.push('Calmer session today: longer rests, and two minutes of slow breathing at the end. Moving at all is a win.');
   else if(P.light&&P.tiredCk) n.push('Light day: two sets per exercise at last time\u2019s weights. Showing up is what counts.');
   if(STRONG()) n.push('Feeling strong: one extra set on the main lifts, and a step up where you were close to the top last time. Keep your form clean.');
@@ -1345,6 +1485,7 @@ function startSession(s,ck={}){
     if(state.hrdev) nat('JarlHR','connect',{id:state.hrdev.id}).catch(()=>{}); }
   $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
+  askNote();
 }
 function openEx(i){LIGHT=!!(state.player&&state.player.light); try{openExInner(i)} finally{LIGHT=false}}
 function openExInner(i){const P=state.player; P.idx=i; if(i>=0){const r=resolve(exFor(P.s)[i]); const sg=suggest(r); P.cur={w:sg.w,r:r.unit==='m'?r.hi:sg.r};} renderPlayer();}
@@ -1374,7 +1515,7 @@ function renderPlayerInner(){
       <div class="sets">${chips}</div>
       ${done?`<p class="muted">All sets done.</p>${(()=>{const nx=nextOpen(P); return nx>-1?`<button class="btn primary" data-act="nextex">Next: ${resolve(ex[nx]).name}</button>`:''})()}`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
       <button class="btn primary" data-act="log">${r.unit==='min'?'Log cardio':`Log set ${logs.length+1} of ${n}`}</button>`}
-      <div class="row between"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="skip">Skip</button></div>
+      <div class="row between" style="flex-wrap:wrap;gap:4px 12px"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="hurt" data-i="${i}">Something hurts?</button><button class="btn link" data-act="skip">Skip</button></div>
     </div></div>`;
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
@@ -1548,6 +1689,14 @@ document.addEventListener('click',ev=>{
     case 'log': logSet(); break;
     case 'skip': {const nx=P.idx+1<exFor(P.s).length?P.idx+1:99; P.rest=null; nx===99?(P.idx=99,renderPlayer()):openEx(nx); break;}
     case 'swap': swapSheet(+t.dataset.i); break;
+    case 'hurt': hurtSheet(+t.dataset.i); break;
+    case 'hurtgo': hurtGo(+t.dataset.i); break;
+    case 'hurtpick': applySore(t.dataset.j,+t.dataset.i,'',false,hurtLevel()); break;
+    case 'hurtskip': {closeSheet(); const i=+t.dataset.i, nx=i+1<exFor(P.s).length?i+1:99; P.rest=null; nx===99?(P.idx=99,renderPlayer()):openEx(nx); break;}
+    case 'hurtback': closeSheet(); openEx(+t.dataset.i); break;
+    case 'month': monthGo(); break;
+    case 'plango': planGo(); break;
+    case 'planuse': planUse(); break;
     case 'pick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.swaps[e.id]=+t.dataset.a; save(); closeSheet(); if(P){openEx(+t.dataset.i)} else render(); break;}
     case 'restadd': P.rest.end+=15e3; P.rest.total+=15; tick(); break;
     case 'restskip': { const nx=P.rest&&P.rest.next; P.rest=null; if(nx!=null) openEx(nx); else tick(); break; }
