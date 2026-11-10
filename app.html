@@ -225,6 +225,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 #player{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:20;padding-top:env(safe-area-inset-top,0px)}
 .phead{position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line)}
 .phead .in{max-width:var(--col,480px);margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.phead .in>div:first-child{flex-shrink:0}.phead .hr{min-width:0;flex-shrink:1;overflow:hidden}.phead .hr svg{flex-shrink:0}.phead .hr small{overflow:hidden;text-overflow:ellipsis}.phead .btn{flex-shrink:0}@media (max-width:459px){.phead .hr .zn{display:none}}@media (max-width:349px){.phead .hr{padding:5px 9px;gap:4px}.phead .btn.ghost{padding-left:12px;padding-right:12px}}
 @media (max-width:389px){.phead .in{padding:12px 14px;gap:8px}.phead .in b{font-size:.95em}}
 @media (max-width:349px){.phead .in{padding:10px 10px;gap:6px}.phead .in b{white-space:normal!important}}
 .pwrap{max-width:var(--col,480px);margin:0 auto;padding-inline:20px;padding-block:18px 160px;display:flex;flex-direction:column;gap:12px}
@@ -1583,7 +1584,7 @@ function tick(){
   if(on&&!P.real){ const target=P.idx===-1?96:84, tau=P.idx===-1?60:32;
     P.hr=target+(P.hr-target)*Math.exp(-dt/tau)+(Math.random()-.5)*.8; P.hrLog.push(P.hr); }
   const fresh=P.real?(P.hr&&now-P.lastHrAt<(P.hrSrc==='bluetooth'?15000:180000)):on;
-  if(on){ const c=$('#hrchip'); if(c){ if(fresh){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>${z[0]}</small>`;} else {c.style.setProperty('--hrc','var(--muted)'); c.innerHTML=`${HEART}<small>${P.real&&!P.lastHrAt&&now-P.t0>90000?'No live pulse':state.hrdev?'Waiting for '+esc(state.hrdev.name):'Waiting for watch'}</small>`;} }
+  if(on){ const c=$('#hrchip'); if(c){ if(fresh){const z=zone(P.hr); c.style.setProperty('--hrc',z[1]); c.innerHTML=`${HEART}${Math.round(P.hr)}<small>Z${z[2]+1}<span class="zn"> ${ZONES[z[2]][1]}</span></small>`;} else {c.style.setProperty('--hrc','var(--muted)'); c.innerHTML=`${HEART}<small>${P.real&&!P.lastHrAt&&now-P.t0>90000?'No live pulse':state.hrdev?'Waiting<span class="zn"> for '+esc(state.hrdev.name)+'</span>':'Waiting<span class="zn"> for watch</span>'}</small>`;} }
     const w=$('#hrwait'); if(w) w.hidden=!(P.real&&!P.lastHrAt&&now-P.t0>45000); }
   const hr=Math.round(P.hr||0), high=on&&fresh&&P.hr>maxHR()*.85, ready=on&&fresh&&P.hr<readyHR();
   const pulseLine=state.hrMed?'Rest until your breathing has settled.':(on&&fresh)?(high?`<b>Pulse ${hr}.</b> That\u2019s high. Take the full rest.`:ready?`<b>Pulse ${hr}.</b> Recovered. Go when you\u2019re ready.`:`Pulse ${hr}. Ready under ${readyHR()}.`):'Rest. Breathe.';
