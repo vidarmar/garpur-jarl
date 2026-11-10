@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,7 +21,7 @@
   --bg:#ECEEEE; --surface:#FFFFFF; --sunk:#E0E5E7; --ink:#16212B; --muted:#56626D; --line:#CDD5DA;
   --accent:#1F4B6E; --accent-ink:#FFFFFF; --accent-soft:#DAE5EE; --brass:#94692A; --brass-soft:#F0E5D1;
   --rest:#3E6B58; --rest-soft:#DCE9E2; --warn:#A0551C; --warn-soft:#F5E3D3; --alert:#B3261E; --alert-soft:#F8DEDA;
-  --far:#A5AFB8; --eq:#B9C2C9; --eqsoft:#E3E8EB;
+  --far:#A5AFB8;--fskin:#E0AE8B;--fskin2:#C9906C;--fshirt:var(--accent);--fshorts:#3D4A57;--fshoe:#2A3138;--fhair:#9AA2AA; --eq:#B9C2C9; --eqsoft:#E3E8EB;
   --z1:#8A949C; --z2:#2F7FC1; --z3:#2E9A5B; --z4:#DB8216; --z5:#D23B2E;
   --display:'Archivo','Arial Narrow',Arial,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -33,13 +33,13 @@
   --bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845;
   --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --brass-soft:#33291A;
   --rest:#86BFA3; --rest-soft:#1A2F25; --warn:#E0A060; --warn-soft:#35261A; --alert:#F2A097; --alert-soft:#3A201D;
-  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
+  --far:#56636F;--fskin:#D9A684;--fskin2:#B98762;--fshirt:var(--accent);--fshorts:#7E8B97;--fshoe:#C3CBD2;--fhair:#A8B0B8; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
   :root:not([data-theme="light"])[data-scheme="pine"]{--accent:#72B891; --accent-soft:#1F3328; --accent-ink:#0F1A14;} }
 :root[data-theme="dark"]{
   --bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845;
   --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --brass-soft:#33291A;
   --rest:#86BFA3; --rest-soft:#1A2F25; --warn:#E0A060; --warn-soft:#35261A; --alert:#F2A097; --alert-soft:#3A201D;
-  --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
+  --far:#56636F;--fskin:#D9A684;--fskin2:#B98762;--fshirt:var(--accent);--fshorts:#7E8B97;--fshoe:#C3CBD2;--fhair:#A8B0B8; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark }
 :root[data-theme="dark"][data-scheme="pine"]{--accent:#72B891; --accent-soft:#1F3328; --accent-ink:#0F1A14;}
 
 *{box-sizing:border-box}
@@ -90,7 +90,7 @@ p{margin:0}
 .maplegend i{width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block}
 details.map summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.9rem;list-style:none}
 details.map summary::-webkit-details-marker{display:none}
-#player.dark{--bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845; --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --rest-soft:#1A2F25; --far:#56636F; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark; background:var(--bg); color:var(--ink)}
+#player.dark{--bg:#0E151C; --surface:#152029; --sunk:#1C2934; --ink:#E4EAEF; --muted:#9AA8B4; --line:#2A3845; --accent:#8CB9DA; --accent-ink:#0B1520; --accent-soft:#1B3043; --brass:#D6AD62; --rest-soft:#1A2F25; --far:#56636F;--fskin:#D9A684;--fskin2:#B98762;--fshirt:var(--accent);--fshorts:#7E8B97;--fshoe:#C3CBD2;--fhair:#A8B0B8; --eq:#3E4D5A; --eqsoft:#1E2A35; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark; background:var(--bg); color:var(--ink)}
 /* 1.7 */
 .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ta{width:100%;min-height:104px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
@@ -283,7 +283,7 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 <div id="sheet" hidden></div>
 
 <script>
-const APP_VERSION='3.1', APP_DATE='10 Nov 2026';
+const APP_VERSION='3.2', APP_DATE='10 Nov 2026';
 const DAY = 864e5;
 const today0=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
 let T0 = today0();
@@ -987,7 +987,57 @@ function poseAt(spec,ms){
   k=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
   return mix(F[0],F[1],k);
 }
-function drawAnim(name,ms){const spec=ANIM[name]; if(!spec) return ''; const f=poseAt(spec,ms); return spec.view==='front'?drawFront(spec,f):drawSide(spec,f);}
+/* ---------- Human figure (3.2): tapered limbs, clothes, skin and a face. Same poses as the line figure. ---------- */
+const FIG={skin:'var(--fskin)',skin2:'var(--fskin2)',shirt:'var(--fshirt)',shorts:'var(--fshorts)',shoe:'var(--fshoe)',hair:'var(--fhair)'};
+const Ln=(a,b,w,c)=>`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+const along=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
+function figLeg(L){ const [hip,kn,an,toe]=L;
+  return Ln(hip,kn,12,FIG.skin)+Ln(kn,an,9,FIG.skin)+Ln(hip,along(hip,kn,.62),14,FIG.shorts)
+    +`<circle cx="${an[0].toFixed(1)}" cy="${an[1].toFixed(1)}" r="4.6" fill="${FIG.shoe}"/>`+Ln(an,toe,7,FIG.shoe); }
+function figArm(A){ const [sh,el,ha]=A;
+  return Ln(sh,el,9,FIG.skin)+Ln(el,ha,7.5,FIG.skin)+Ln(sh,along(sh,el,.42),11.5,FIG.shirt)
+    +`<circle cx="${ha[0].toFixed(1)}" cy="${ha[1].toFixed(1)}" r="4.4" fill="${FIG.skin}"/>`; }
+function figTorso(P){ const [hx,hy]=P.hip,[sx,sy]=P.sh, dx=sx-hx, dy=sy-hy, d=Math.hypot(dx,dy)||1, nx=-dy/d, ny=dx/d;
+  if(P.ctrl) return `<path d="M${hx.toFixed(1)},${hy.toFixed(1)} Q${P.ctrl[0].toFixed(1)},${P.ctrl[1].toFixed(1)} ${sx.toFixed(1)},${sy.toFixed(1)}" fill="none" stroke="${FIG.shirt}" stroke-width="18" stroke-linecap="round"/>`+`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="8.5" fill="${FIG.shorts}"/>`;
+  // Chest a little deeper than the waist, on the front side
+  const p=[[hx+nx*6.5,hy+ny*6.5],[hx-nx*6.5,hy-ny*6.5],[sx-nx*8,sy-ny*8],[sx+nx*9.5,sy+ny*9.5]].map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');
+  return `<polygon points="${p}" fill="${FIG.shirt}" stroke="${FIG.shirt}" stroke-width="6" stroke-linejoin="round"/>`+`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="8.5" fill="${FIG.shorts}"/>`; }
+function figHead(c,ang,neck,sh){ const r=(180-ang).toFixed(1);
+  return Ln(sh,neck,7.5,FIG.skin)+`<g transform="translate(${c[0].toFixed(1)},${c[1].toFixed(1)}) rotate(${r})">
+    <ellipse cx="0" cy="-.5" rx="9.4" ry="10.6" fill="${FIG.skin}"/>
+    <path d="M-9.6,1.5 A9.6 10.8 0 0 1 8.6,-5.4 Q3,-5.8 -1.5,-2.6 Q-5,.2 -9.6,1.5 Z" fill="${FIG.hair}"/>
+    <path d="M8.6,-1.6 L11.8,2.2 L8.4,3.4 Z" fill="${FIG.skin}"/>
+    <ellipse cx="-1.6" cy="1" rx="2" ry="2.8" fill="${FIG.skin2}"/>
+  </g>`; }
+function drawSideHuman(spec,f){
+  const P=sidePose(f,spec), p=spec.p||{};
+  let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
+  s+=`<g opacity=".42">${figLeg(P.far.leg)}${figArm(P.far.arm)}</g>`+drawProps(spec,P);
+  if(p.cable){const h=P.near.arm[2];s+=`<circle cx="${p.cable[0]}" cy="${p.cable[1]}" r="5" fill="var(--eq)"/><line x1="${p.cable[0]}" y1="${p.cable[1]}" x2="${h[0]}" y2="${h[1]}" stroke="var(--eq)" stroke-width="2"${p.cable[2]?' stroke-dasharray="4 4"':''}/>`}
+  if(p.plate){const [k,a]=[P.near.leg[1],P.near.leg[2]],ang=Math.atan2(a[1]-k[1],a[0]-k[0])*180/Math.PI;s+=`<rect x="-3" y="-16" width="6" height="32" rx="2" fill="var(--eq)" transform="translate(${a[0]+5*Math.cos(rad(ang))},${a[1]+5*Math.sin(rad(ang))}) rotate(${ang})"/>`}
+  s+=figLeg(P.near.leg)+figTorso(P)+figHead(P.head,f.t+(f.nod||0),P.neck,P.sh)+figArm(P.near.arm);
+  const dbE=h=>`<circle cx="${h[0]}" cy="${h[1]}" r="7.5" fill="var(--brass)"/><circle cx="${h[0]}" cy="${h[1]}" r="2.5" fill="var(--bg)"/>`;
+  if(p.db==='both') s+=dbE(P.far.arm[2])+dbE(P.near.arm[2]); if(p.db==='n') s+=dbE(P.near.arm[2]);
+  if(p.goblet){const h=lerpP(P.near.arm[2],P.far.arm[2],.5);s+=`<rect x="${h[0]-4}" y="${h[1]-12}" width="8" height="24" rx="2" fill="var(--brass)"/><rect x="${h[0]-8}" y="${h[1]-14}" width="16" height="6" rx="2" fill="var(--brass)"/><rect x="${h[0]-8}" y="${h[1]+8}" width="16" height="6" rx="2" fill="var(--brass)"/>`}
+  if(p.bar){const h=P.near.arm[2];s+=`<circle cx="${h[0]}" cy="${h[1]}" r="4" fill="var(--brass)"/>`}
+  if(p.dbHip){s+=`<circle cx="${P.hip[0]}" cy="${P.hip[1]-10}" r="7.5" fill="var(--brass)"/><circle cx="${P.hip[0]}" cy="${P.hip[1]-10}" r="2.5" fill="var(--bg)"/>`}
+  return s;
+}
+function drawFrontHuman(spec,f){
+  const P=frontPose(f), p=spec.p||{}, x=P.x, y=P.y;
+  let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
+  const leg=d=>{const hip=[x+8*d,y],kn=[x+10*d,y+39],an=[x+12*d,FLOOR-3];
+    return Ln(hip,kn,12,FIG.skin)+Ln(kn,an,9,FIG.skin)+Ln(hip,along(hip,kn,.62),14,FIG.shorts)+`<rect x="${(an[0]-(d<0?11:3)).toFixed(1)}" y="${FLOOR-6}" width="14" height="6" rx="3" fill="${FIG.shoe}"/>`;};
+  s+=leg(-1)+leg(1)+`<rect x="${x-15}" y="${y-8}" width="30" height="14" rx="6" fill="${FIG.shorts}"/>`;
+  s+=`<polygon points="${[[x-12,y+2],[x+12,y+2],[P.shR[0]+3,P.shR[1]+2],[P.shL[0]-3,P.shL[1]+2]].map(q=>q.join(',')).join(' ')}" fill="${FIG.shirt}" stroke="${FIG.shirt}" stroke-width="8" stroke-linejoin="round"/>`;
+  s+=figArm([P.shR,P.eR,P.hR])+figArm([P.shL,P.eL,P.hL]);
+  s+=Ln([x,y-52],[x,y-58],8,FIG.skin)+`<ellipse cx="${x}" cy="${y-66}" rx="9.6" ry="11" fill="${FIG.skin}"/><path d="M${x-9.8},${y-65} A9.8 11 0 0 1 ${x+9.8},${y-65} Q${x+7},${y-73} ${x},${y-73} Q${x-7},${y-73} ${x-9.8},${y-65} Z" fill="${FIG.hair}"/>`
+    +`<ellipse cx="${x-10}" cy="${y-64}" rx="2" ry="3" fill="${FIG.skin2}"/><ellipse cx="${x+10}" cy="${y-64}" rx="2" ry="3" fill="${FIG.skin2}"/>`;
+  const db=(h)=>`<rect x="${h[0]-11}" y="${h[1]-3}" width="22" height="6" rx="2" fill="var(--brass)"/><rect x="${h[0]-13}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/><rect x="${h[0]+7}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/>`;
+  if(p.db==='both') s+=db(P.hR)+db(P.hL); if(p.db==='r') s+=db(P.hR);
+  return s;
+}
+function drawAnim(name,ms){const spec=ANIM[name]; if(!spec) return ''; const f=poseAt(spec,ms); if((spec.p||{}).suit) return drawSide(spec,f); return spec.view==='front'?drawFrontHuman(spec,f):drawSideHuman(spec,f);}
 const ANIMS=new Set(); let rafOn=false;
 const REDUCED=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 function mountAnims(root=document){
