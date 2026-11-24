@@ -898,7 +898,8 @@ ANIM['Ankle rocks']={f:[{hip:[104,120],t:180,hn:[26,30],hf:[22,32],an:[140,165],
 ANIM['Chin tucks']={p:{lines:[[96,62,96,126],[96,126,128,126],[112,126,112,165]]},f:[{hip:[106,120],t:180,hn:[26,40],an:[146,165],af:[142,165],hd:[10,2]},{hip:[106,120],t:180,hn:[26,40],an:[146,165],af:[142,165],hd:[-6,0]}]};
 ANIM['Hammer curl']=ANIM['Dumbbell biceps curl'];
 ANIM['Band seated row']={...ANIM['Seated cable row'],p:{box:[74,138,36,27],cable:[208,140,1],lines:[[180,165,186,138]]}};
-ANIM['Brisk walk']={p:{},loop:1,f:walk(16,[8,50])};
+// Brisk walk: arms swing opposite to the legs
+ANIM['Brisk walk']={p:{},loop:1,f:walk(16,[2,52]).map((f,i)=>({...f,hn:[[-10,49],[2,52],[14,47],[2,52]][i],hf:[[14,47],[2,52],[-10,49],[2,52]][i]}))};
 ANIM['Neutral-grip pulldown']=ANIM['Lat pulldown'];
 ANIM['Band pulldown']={...ANIM['Lat pulldown'],p:{box:[92,126,34,39],cable:[114,-18,1]}};
 ANIM['Band pushdown']={...ANIM['Triceps pushdown'],p:{cable:[152,-18,1]}};
@@ -906,11 +907,32 @@ ANIM['Bent-over dumbbell row']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],
 ANIM['Dumbbell reverse fly']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],an:[124,165],af:[118,165]},{hip:[106,86],t:112,hn:[8,10],an:[124,165],af:[118,165]}]};
 ANIM['Farmer march']={p:{db:'both'},loop:1,cyc:2800,f:[{hip:[120,86],t:180,hn:[2,54],an:[140,134],af:[118,165]},{hip:[120,88],t:180,hn:[2,54],an:[124,165],af:[118,165]},{hip:[120,86],t:180,hn:[2,54],an:[124,165],af:[136,136]},{hip:[120,88],t:180,hn:[2,54],an:[124,165],af:[118,165]}]};
 [['Alternating dumbbell bench press','Dumbbell bench press'],['Close-grip dumbbell press','Dumbbell bench press'],
- ['Band biceps curl','Dumbbell biceps curl'],['Band pull-apart','Band face pull'],['Band row','Band seated row'],['Single-leg stand, eyes closed','Single-leg stand'],['Kettlebell deadlift','Romanian deadlift'],
- ['Single-leg Romanian deadlift','Romanian deadlift'],['Single-arm cable pulldown','Lat pulldown'],['Arnold press','Seated shoulder press'],['Half-kneeling one-arm press','Seated shoulder press'],
- ['Reverse lunge','Split squat'],['Lateral lunge','Split squat'],['Close-grip push-up','Incline push-up'],['Side plank on knees','Side plank'],
- ['Lateral step-up','Dumbbell step-up'],['Step-down','Low step-up'],['Single-arm cable row','Seated cable row'],['Single-leg glute bridge','Glute bridge'],['Half-kneeling Pallof press','Pallof press'],['Band woodchop','Pallof press'],
- ['Cable lateral raise','Lateral raise'],['Calf raise on a step','Two-leg calf raise'],['Floor back extension','Back extension']].forEach(([a,b])=>{ if(!ANIM[a]&&ANIM[b]) ANIM[a]=ANIM[b]; });
+ ['Band biceps curl','Dumbbell biceps curl'],['Band pull-apart','Band face pull'],['Band row','Band seated row'],['Single-leg stand, eyes closed','Single-leg stand'],
+ ['Single-arm cable pulldown','Lat pulldown'],
+ ['Close-grip push-up','Incline push-up'],['Side plank on knees','Side plank'],
+ ['Lateral step-up','Dumbbell step-up'],['Single-arm cable row','Seated cable row'],
+ ['Cable lateral raise','Lateral raise'],['Floor back extension','Back extension']].forEach(([a,b])=>{ if(!ANIM[a]&&ANIM[b]) ANIM[a]=ANIM[b]; });
+
+
+/* ---------- Own movements for variants that used to borrow one (3.3) ---------- */
+const KNEEL={hip:[114,120],t:180,an:[146,165],af:[68,163]}; // half-kneeling: front foot flat, back knee on the floor
+Object.assign(ANIM,{
+ 'Reverse lunge':{p:{db:'both'},down:1,f:[st({hn:[2,52]}),{hip:[120,92],t:180,hn:[2,52],an:[124,165],af:[98,148]},{hip:[114,123],t:182,hn:[2,52],an:[136,165],af:[76,162]}]},
+ 'Single-leg Romanian deadlift':{p:{db:'both'},down:1,f:[st({hn:[2,52],af:[116,158]}),{hip:[112,88],t:100,hn:[-2,50],an:[124,165],af:[36,104]}]},
+ 'Kettlebell deadlift':{p:{kb:1},f:[{hip:[100,108],t:126,hn:[0,50],hf:[-2,50],an:[124,165],af:[118,165]},st({hn:[4,52],hf:[2,52]})]},
+ 'Arnold press':{p:{lines:[[96,62,96,126],[96,126,128,126],[112,126,112,165]],db:'both'},f:[{hip:[106,120],t:180,hn:[20,-6],an:[146,165],af:[142,165]},{hip:[106,120],t:180,hn:[12,-30],an:[146,165],af:[142,165]},{hip:[106,120],t:180,hn:[4,-54],an:[146,165],af:[142,165]}]},
+ 'Half-kneeling one-arm press':{p:{db:'n'},f:[{...KNEEL,hn:[10,-2],hf:[6,40]},{...KNEEL,hn:[4,-54],hf:[6,40]}]},
+ 'Half-kneeling Pallof press':{p:{cable:[36,62]},f:[{...KNEEL,hn:[10,16]},{...KNEEL,hn:[52,14]}]},
+ 'Band woodchop':{p:{cable:[52,-4,1]},f:[{hip:[118,90],t:178,hn:[-26,-30],hf:[-24,-28],an:[128,165],af:[112,165]},{hip:[120,96],t:172,hn:[40,38],hf:[38,40],an:[128,165],af:[112,165]}]},
+ 'Step-down':{p:{box:[132,145,44,20]},down:1,f:[{hip:[140,70],t:180,hn:[4,52],an:[148,145],af:[138,145]},{hip:[136,78],t:180,hn:[10,48],an:[148,145],af:[122,152]},{hip:[132,84],t:182,hn:[14,46],an:[148,145],af:[114,165]}]},
+ 'Single-leg glute bridge':{p:{},f:[{hip:[128,157],t:-90,hn:[36,6],an:[168,165],af:[200,140]},{hip:[126,136],t:-66,hn:[34,6],an:[168,165],af:[202,112]}]},
+ 'Calf raise on a step':{p:{wall:190,box:[100,150,40,15]},f:[{hip:[120,72],t:180,hn:[50,22],an:[122,150],af:[118,150]},{hip:[121,64],t:180,hn:[50,14],an:[123,142],af:[119,142]}]},
+ 'Lateral lunge':{view:'front',p:{},down:1,f:[{hip:[120,82.5],hr:[-10,34],hl:[10,34],ar:[132,162],al:[108,162]},{hip:[124,86],hr:[-10,34],hl:[10,34],ar:[150,150],al:[108,162]},{hip:[140,100],hr:[-10,34],hl:[10,34],ar:[178,162],al:[86,162]}]}
+});
+// Which way a rep starts: lowering first for these (and their variants)
+['Goblet squat','Box squat','Leg press','Leg press, short range','Romanian deadlift','Split squat','Incline push-up','Close-grip push-up'].forEach(n=>{ if(ANIM[n]) ANIM[n]={...ANIM[n],down:1}; });
+// Mobility, stretches and machines with an even rhythm: no lift/lower cue
+['Dead bug','Bent-knee dead bug','Bird dog','Cat-cow','Hip flexor stretch','Child’s pose reach','Wall slides','Ankle rocks','Chin tucks','Rower or arm bike'].forEach(n=>{ if(ANIM[n]) ANIM[n]={...ANIM[n],free:1}; });
 
 ANIM['Heel-to-toe walk backwards']={...ANIM['Heel-to-toe walk'],f:[...ANIM['Heel-to-toe walk'].f].reverse()};
 
@@ -994,13 +1016,31 @@ function poseAt(spec,ms){
     for(const k of ['an','af']) if(f[k]&&f[k][1]>FLOOR) f[k]=[f[k][0],FLOOR]; // planted feet never sink into the floor
     return f;
   }
-  // Reps: pause, move, pause, move back. Movement starts and stops gently (smootherstep).
-  const cyc=spec.hold?3000:3400, x=(ms%cyc)/cyc;
-  let k= x<.1?0 : x<.45?(x-.1)/.35 : x<.6?1 : x<.95?1-(x-.6)/.35 : 0;
-  return mix(F[0],F[1],ease(k));
+  if(spec.free){ // mobility and stretches: even, unhurried
+    const cyc=spec.hold?3000:3400, x=(ms%cyc)/cyc; let k= x<.1?0 : x<.45?(x-.1)/.35 : x<.6?1 : x<.95?1-(x-.6)/.35 : 0;
+    return mixR(F,ease(k));
+  }
+  if(spec.hold){const x=(ms%3000)/3000, k=x<.5?ease(x*2):ease(2-x*2); return mixR(F,k);}
+  // Strength reps (3.3): lift in about 1.4 s, lower slowly in about 2.6 s, short pauses between.
+  const cyc=5000, x=(ms%cyc)/cyc; let k, ph;
+  if(spec.down){ // starts at the top: lower first (squats, deadlifts, lunges, push-ups)
+    if(x<.06){k=0;ph='down'} else if(x<.58){k=(x-.06)/.52;ph='down'} else if(x<.66){k=1;ph='up'} else if(x<.94){k=1-(x-.66)/.28;ph='up'} else {k=0;ph='down'}
+  } else {
+    if(x<.08){k=0;ph='up'} else if(x<.36){k=(x-.08)/.28;ph='up'} else if(x<.46){k=1;ph='down'} else if(x<.98){k=1-(x-.46)/.52;ph='down'} else {k=0;ph='up'}
+  }
+  const f=mixR(F,ease(k)); f._ph=ph; return f;
 }
+// Two keyframes: straight blend. Three: a smooth curve that passes through the middle one (for steps that lift a foot).
+function mixR(F,k){ if(F.length<3) return mix(F[0],F[1],k);
+  const [A,M,B]=F, o={}; for(const key in A){const a=A[key],m=M[key]??a,b=B[key]??a;
+    const q=(p0,pm,p2)=>{const c=2*pm-(p0+p2)/2;return (1-k)*(1-k)*p0+2*k*(1-k)*c+k*k*p2};
+    o[key]=Array.isArray(a)?[q(a[0],m[0],b[0]),q(a[1],m[1],b[1])]:typeof a==='number'?q(a,m,b):a} return o; }
+const CUE_UP=n=>/chop/i.test(n)?'Chop':/push-up|pushdown/i.test(n)?'Push':/press/i.test(n)?'Press':/row|pull|face/i.test(n)?'Pull':/squat|lunge|deadlift|step/i.test(n)?'Stand up':/curl/i.test(n)?'Curl':'Lift';
+const CUE_DOWN=n=>/push-up/i.test(n)?'Lower slowly':/row|pull|press|push|face|chop/i.test(n)?'Slowly back':'Lower slowly';
 /* ---------- Human figure (3.2): tapered limbs, clothes, skin and a face. Same poses as the line figure. ---------- */
 const FIG={skin:'var(--fskin)',skin2:'var(--fskin2)',shirt:'var(--fshirt)',shorts:'var(--fshorts)',shoe:'var(--fshoe)',hair:'var(--fhair)'};
+// Far-side limbs: the same colours a shade darker (solid, so the bench and floor don't show through)
+const shade=v=>`color-mix(in srgb, ${v} 78%, #10161c)`, FIGF={skin:shade(FIG.skin),shirt:shade(FIG.shirt),shorts:shade(FIG.shorts),shoe:shade(FIG.shoe)};
 const Ln=(a,b,w,c)=>`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
 const along=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];
 // Tapered limb: width w1 at a, w2 at b, rounded at both ends (3.3)
@@ -1011,12 +1051,23 @@ function blob(P,c){const n=P.length,f=v=>v.toFixed(1);let d=`M${f(P[0][0])},${f(
   for(let i=0;i<n;i++){const p0=P[(i-1+n)%n],p1=P[i],p2=P[(i+1)%n],p3=P[(i+2)%n];
     d+=` C${f(p1[0]+(p2[0]-p0[0])/6)},${f(p1[1]+(p2[1]-p0[1])/6)} ${f(p2[0]-(p3[0]-p1[0])/6)},${f(p2[1]-(p3[1]-p1[1])/6)} ${f(p2[0])},${f(p2[1])}`;}
   return `<path d="${d} Z" fill="${c}"/>`;}
-function figLeg(L){ const [hip,kn,an,toe]=L;
-  return tl(hip,kn,13,10,FIG.skin)+tl(kn,an,9.5,6.5,FIG.skin)+tl(hip,along(hip,kn,.6),15,12.5,FIG.shorts)
-    +`<circle cx="${an[0].toFixed(1)}" cy="${an[1].toFixed(1)}" r="4.6" fill="${FIG.shoe}"/>`+Ln(an,toe,7,FIG.shoe); }
-function figArm(A){ const [sh,el,ha]=A;
-  return tl(sh,el,9.5,7.5,FIG.skin)+tl(el,ha,7.5,6,FIG.skin)+tl(sh,along(sh,el,.4),12,10.5,FIG.shirt)
-    +`<circle cx="${ha[0].toFixed(1)}" cy="${ha[1].toFixed(1)}" r="4.2" fill="${FIG.skin}"/>`; }
+// Limb with a muscle profile: rows [k along a->b, half-width on the front side, half-width on the back side].
+// back = unit normal pointing to the back of the limb (inside of the knee bend).
+function shaped(a,b,prof,back,c){const dx=b[0]-a[0],dy=b[1]-a[1],F=prof.map(([k,fr])=>[a[0]+dx*k-back[0]*fr,a[1]+dy*k-back[1]*fr]),B=prof.map(([k,,bk])=>[a[0]+dx*k+back[0]*bk,a[1]+dy*k+back[1]*bk]).reverse();
+  return blob([...F,...B],c);}
+function inside(a,b,o){const dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy)||1,n=[-dy/d,dx/d];return (n[0]*(o[0]-a[0])+n[1]*(o[1]-a[1]))>=0?n:[-n[0],-n[1]];}
+const THIGH=[[-.06,7.4,7.8],[.3,8.2,8],[.65,6.9,6.6],[.95,5.4,5.2],[1.06,4.4,4.4]], SHIN=[[-.04,4.8,5],[.25,4.6,7.2],[.52,4.1,5.4],[.82,3.3,3.5],[1.03,3.1,3.1]], SHORTS=[[-.08,9,9.2],[.3,9.2,9],[.62,8.2,7.8]];
+function shoe(an,toe,c){const ux=toe[0]-an[0],uy=toe[1]-an[1],u=Math.hypot(ux,uy)||1,ex=ux/u,ey=uy/u,heel=[an[0]-ex*3.2,an[1]-ey*3.2],nx=-ey,ny=ex,f=v=>v.toFixed(1);
+  // upper, then a lighter sole along the floor side
+  return tl(heel,toe,8.6,6.4,c)+`<line x1="${f(heel[0]+nx*3.6)}" y1="${f(heel[1]+ny*3.6)}" x2="${f(toe[0]+nx*2.7)}" y2="${f(toe[1]+ny*2.7)}" stroke="var(--eq)" stroke-width="1.8" stroke-linecap="round"/>`;}
+function figLeg(L,far){ const [hip,kn,an,toe]=L, sk=far?FIGF.skin:FIG.skin, sh=far?FIGF.shorts:FIG.shorts;
+  const bt=inside(hip,kn,an), bs=inside(kn,an,hip);
+  return shaped(hip,kn,THIGH,bt,sk)+shaped(kn,an,SHIN,bs,sk)+shaped(hip,kn,SHORTS,bt,sh)+shoe(an,toe,far?FIGF.shoe:FIG.shoe); }
+function figArm(A,far,grip){ const [sh,el,ha]=A, sk=far?FIGF.skin:FIG.skin;
+  return tl(sh,el,10,7.8,sk)+tl(el,ha,8,6,sk)+tl(sh,along(sh,el,.4),12.5,11,far?FIGF.shirt:FIG.shirt)
+    +(grip?'':`<circle cx="${ha[0].toFixed(1)}" cy="${ha[1].toFixed(1)}" r="4.3" fill="${sk}"/>`); }
+// A fist seen from the side, closed round a handle (drawn over the dumbbell)
+const fist=(h,c=FIG.skin)=>`<rect x="${(h[0]-4.4).toFixed(1)}" y="${(h[1]-5.4).toFixed(1)}" width="8.8" height="10.8" rx="3.8" fill="${c}"/><path d="M${(h[0]+1.6).toFixed(1)},${(h[1]-3.6).toFixed(1)} v7.2" stroke="${FIG.skin2}" stroke-width="1" stroke-linecap="round" opacity=".7"/>`;
 // Torso outline in body coordinates: k = 0 at the hip, 1 at the shoulder; o > 0 is the chest side, o < 0 the back.
 const TORSO=[[-.05,0],[0,-10],[.3,-8.2],[.58,-9],[.83,-10],[1,-9],[1.05,-4],[1.06,3],[1,9],[.8,13.2],[.6,11.6],[.4,10.4],[.18,10.6],[0,10]];
 function figTorso(P){ const [hx,hy]=P.hip,[sx,sy]=P.sh, dx=sx-hx, dy=sy-hy, d=Math.hypot(dx,dy)||1, ux=dx/d, uy=dy/d, nx=-uy, ny=ux;
@@ -1041,12 +1092,17 @@ function figHead(c,ang,neck,sh){ const r=(180-ang).toFixed(1);
 function drawSideHuman(spec,f){
   const P=sidePose(f,spec), p=spec.p||{};
   let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
-  s+=`<g opacity=".42">${figLeg(P.far.leg)}${figArm(P.far.arm)}</g>`+drawProps(spec,P);
+  // soft shadow under the feet that touch the floor
+  const onF=[P.near.leg[2],P.far.leg[2]].filter(a=>a[1]>FLOOR-6);
+  if(onF.length){const xs=onF.map(a=>a[0]),x0=Math.min(...xs)-10,x1=Math.max(...xs)+16;s+=`<ellipse cx="${((x0+x1)/2).toFixed(1)}" cy="${FLOOR}" rx="${((x1-x0)/2).toFixed(1)}" ry="3.2" fill="var(--eq)" opacity=".45"/>`;}
+  const grip=!!(p.db||p.kb);
+  s+=figLeg(P.far.leg,1)+figArm(P.far.arm,1,grip&&p.db==='both')+drawProps(spec,P);
   if(p.cable){const h=P.near.arm[2];s+=`<circle cx="${p.cable[0]}" cy="${p.cable[1]}" r="5" fill="var(--eq)"/><line x1="${p.cable[0]}" y1="${p.cable[1]}" x2="${h[0]}" y2="${h[1]}" stroke="var(--eq)" stroke-width="2"${p.cable[2]?' stroke-dasharray="4 4"':''}/>`}
   if(p.plate){const [k,a]=[P.near.leg[1],P.near.leg[2]],ang=Math.atan2(a[1]-k[1],a[0]-k[0])*180/Math.PI;s+=`<rect x="-3" y="-16" width="6" height="32" rx="2" fill="var(--eq)" transform="translate(${a[0]+5*Math.cos(rad(ang))},${a[1]+5*Math.sin(rad(ang))}) rotate(${ang})"/>`}
-  s+=figLeg(P.near.leg)+figTorso(P)+figHead(P.head,f.t+(f.nod||0),P.neck,P.sh)+figArm(P.near.arm);
-  const dbE=h=>`<circle cx="${h[0]}" cy="${h[1]}" r="7.5" fill="var(--brass)"/><circle cx="${h[0]}" cy="${h[1]}" r="2.5" fill="var(--bg)"/>`;
-  if(p.db==='both') s+=dbE(P.far.arm[2])+dbE(P.near.arm[2]); if(p.db==='n') s+=dbE(P.near.arm[2]);
+  s+=figLeg(P.near.leg)+figTorso(P)+figHead(P.head,f.t+(f.nod||0),P.neck,P.sh)+figArm(P.near.arm,0,grip);
+  const dbE=h=>`<circle cx="${h[0].toFixed(1)}" cy="${h[1].toFixed(1)}" r="7.5" fill="var(--brass)"/>`;
+  if(p.db==='both') s+=dbE(P.far.arm[2])+fist(P.far.arm[2],FIGF.skin)+dbE(P.near.arm[2])+fist(P.near.arm[2]); if(p.db==='n') s+=dbE(P.near.arm[2])+fist(P.near.arm[2]);
+  if(p.kb){const h=lerpP(P.near.arm[2],P.far.arm[2],.5),f2=v=>v.toFixed(1);s+=`<path d="M${f2(h[0]-5)},${f2(h[1]+3)} v-4 a5 5 0 0 1 10 0 v4" fill="none" stroke="var(--brass)" stroke-width="2.6"/><circle cx="${f2(h[0])}" cy="${f2(h[1]+11)}" r="9" fill="var(--brass)"/>`+fist(h);}
   if(p.goblet){const h=lerpP(P.near.arm[2],P.far.arm[2],.5);s+=`<rect x="${h[0]-4}" y="${h[1]-12}" width="8" height="24" rx="2" fill="var(--brass)"/><rect x="${h[0]-8}" y="${h[1]-14}" width="16" height="6" rx="2" fill="var(--brass)"/><rect x="${h[0]-8}" y="${h[1]+8}" width="16" height="6" rx="2" fill="var(--brass)"/>`}
   if(p.bar){const h=P.near.arm[2];s+=`<circle cx="${h[0]}" cy="${h[1]}" r="4" fill="var(--brass)"/>`}
   if(p.dbHip){s+=`<circle cx="${P.hip[0]}" cy="${P.hip[1]-10}" r="7.5" fill="var(--brass)"/><circle cx="${P.hip[0]}" cy="${P.hip[1]-10}" r="2.5" fill="var(--bg)"/>`}
@@ -1055,33 +1111,40 @@ function drawSideHuman(spec,f){
 function drawFrontHuman(spec,f){
   const P=frontPose(f), p=spec.p||{}, x=P.x, y=P.y;
   let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
-  const leg=d=>{const hip=[x+8*d,y],kn=[x+10*d,y+39],an=[x+12*d,FLOOR-3];
-    return Ln(hip,kn,12,FIG.skin)+Ln(kn,an,9,FIG.skin)+Ln(hip,along(hip,kn,.62),14,FIG.shorts)+`<rect x="${(an[0]-(d<0?11:3)).toFixed(1)}" y="${FLOOR-6}" width="14" height="6" rx="3" fill="${FIG.shoe}"/>`;};
-  s+=leg(-1)+leg(1)+`<rect x="${x-15}" y="${y-8}" width="30" height="14" rx="6" fill="${FIG.shorts}"/>`;
-  s+=`<polygon points="${[[x-12,y+2],[x+12,y+2],[P.shR[0]+3,P.shR[1]+2],[P.shL[0]-3,P.shL[1]+2]].map(q=>q.join(',')).join(' ')}" fill="${FIG.shirt}" stroke="${FIG.shirt}" stroke-width="8" stroke-linejoin="round"/>`;
-  s+=figArm([P.shR,P.eR,P.hR])+figArm([P.shL,P.eL,P.hL]);
+  const ank=d=>(d>0?f.ar:f.al)||[x+12*d,FLOOR-3];
+  s+=`<ellipse cx="${((ank(1)[0]+ank(-1)[0])/2).toFixed(1)}" cy="${FLOOR}" rx="${(Math.abs(ank(1)[0]-ank(-1)[0])/2+18).toFixed(1)}" ry="3.2" fill="var(--eq)" opacity=".45"/>`;
+  const leg=d=>{const hip=[x+8*d,y],A=ank(d),moved=d>0?f.ar:f.al,[kn,an]=moved?ik(hip,A,LEN.th,LEN.sh,d):[along(hip,A,.5),A];
+    return shaped(hip,kn,THIGH,[d,0],FIG.skin)+shaped(kn,an,SHIN,[d,0],FIG.skin)+shaped(hip,kn,SHORTS,[d,0],FIG.shorts)+`<rect x="${(an[0]-(d<0?11:3)).toFixed(1)}" y="${(an[1]-3).toFixed(1)}" width="14" height="6" rx="3" fill="${FIG.shoe}"/>`;};
+  s+=leg(-1)+leg(1)+blob([[x-15,y+6],[x-14.5,y-6],[x,y-8],[x+14.5,y-6],[x+15,y+6],[x+9,y+9],[x,y+5],[x-9,y+9]],FIG.shorts);
+  s+=blob([[x-12.5,y-3],[x-12,y-14],[x-14,y-26],[x-17.5,y-38],[x-19.5,y-45],[x-14,y-50.5],[x-5,y-52],[x+5,y-52],[x+14,y-50.5],[x+19.5,y-45],[x+17.5,y-38],[x+14,y-26],[x+12,y-14],[x+12.5,y-3],[x,y-1]],FIG.shirt);
+  const g=!!p.db;
+  s+=figArm([P.shR,P.eR,P.hR],0,g)+figArm([P.shL,P.eL,P.hL],0,g&&p.db==='both');
   s+=Ln([x,y-52],[x,y-58],8,FIG.skin)+`<ellipse cx="${x}" cy="${y-66}" rx="9.6" ry="11" fill="${FIG.skin}"/><path d="M${x-10},${y-63} C${x-10.6},${y-74} ${x-6},${y-78.4} ${x},${y-78.2} C${x+6},${y-78.4} ${x+10.6},${y-74} ${x+10},${y-63} C${x+9},${y-67} ${x+7},${y-70} ${x+3},${y-71} Q${x},${y-70.4} ${x-3},${y-71} C${x-7},${y-70} ${x-9},${y-67} ${x-10},${y-63} Z" fill="${FIG.hair}"/>`
     +`<ellipse cx="${x-10}" cy="${y-64}" rx="2" ry="3" fill="${FIG.skin2}"/><ellipse cx="${x+10}" cy="${y-64}" rx="2" ry="3" fill="${FIG.skin2}"/>`
     +`<ellipse cx="${x-3.6}" cy="${y-65.5}" rx="1" ry="1.15" fill="${FIG.shoe}"/><ellipse cx="${x+3.6}" cy="${y-65.5}" rx="1" ry="1.15" fill="${FIG.shoe}"/>`
     +`<path d="M${x-5.6},${y-68.2} Q${x-3.6},${y-69.2} ${x-1.8},${y-68.4} M${x+1.8},${y-68.4} Q${x+3.6},${y-69.2} ${x+5.6},${y-68.2}" fill="none" stroke="${FIG.hair}" stroke-width="1.2" stroke-linecap="round"/>`
     +`<path d="M${x},${y-65} L${x-1},${y-61.6} L${x+.8},${y-61.4}" fill="none" stroke="${FIG.skin2}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M${x-4.4},${y-59.2} Q${x-2.2},${y-61.6} ${x},${y-60.7} Q${x+2.2},${y-61.6} ${x+4.4},${y-59.2} Q${x+2.2},${y-59.6} ${x},${y-59.1} Q${x-2.2},${y-59.6} ${x-4.4},${y-59.2} Z" fill="${FIG.hair}"/><path d="M${x-2},${y-57.6} Q${x},${y-57.1} ${x+2},${y-57.6}" fill="none" stroke="${FIG.skin2}" stroke-width="1" stroke-linecap="round"/>`;
   const db=(h)=>`<rect x="${h[0]-11}" y="${h[1]-3}" width="22" height="6" rx="2" fill="var(--brass)"/><rect x="${h[0]-13}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/><rect x="${h[0]+7}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/>`;
-  if(p.db==='both') s+=db(P.hR)+db(P.hL); if(p.db==='r') s+=db(P.hR);
+  const fistF=h=>`<rect x="${(h[0]-4.6).toFixed(1)}" y="${(h[1]-4.6).toFixed(1)}" width="9.2" height="9.2" rx="3.6" fill="${FIG.skin}"/>`;
+  if(p.db==='both') s+=db(P.hR)+fistF(P.hR)+db(P.hL)+fistF(P.hL); if(p.db==='r') s+=db(P.hR)+fistF(P.hR);
   return s;
 }
-function drawAnim(name,ms){const spec=ANIM[name]; if(!spec) return ''; const f=poseAt(spec,ms); if((spec.p||{}).suit) return drawSide(spec,f); return spec.view==='front'?drawFrontHuman(spec,f):drawSideHuman(spec,f);}
+function drawAnim(name,ms,cue){const spec=ANIM[name]; if(!spec) return ''; const f=poseAt(spec,ms); if((spec.p||{}).suit) return drawSide(spec,f);
+  let s=spec.view==='front'?drawFrontHuman(spec,f):drawSideHuman(spec,f);
+  if(cue&&f._ph) s+=`<text x="232" y="-6" text-anchor="end" font-size="12" font-weight="600" fill="var(--muted)">${f._ph==='up'?CUE_UP(name):CUE_DOWN(name)}</text>`;
+  return s;}
 const ANIMS=new Set(); let rafOn=false;
 const REDUCED=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 function mountAnims(root=document){
-  root.querySelectorAll('svg[data-anim]:not([data-on])').forEach(el=>{el.dataset.on='1';const a={el,name:el.dataset.anim,cycle:el.dataset.cycle?el.dataset.cycle.split('|'):null,t0:performance.now(),paused:REDUCED,at:REDUCED?1500:0};ANIMS.add(a);el._a=a;el.innerHTML=drawAnim(a.name,a.at)});
+  root.querySelectorAll('svg[data-anim]:not([data-on])').forEach(el=>{el.dataset.on='1';const a={el,name:el.dataset.anim,cue:!!el.dataset.cue,cycle:el.dataset.cycle?el.dataset.cycle.split('|'):null,t0:performance.now(),paused:REDUCED,at:REDUCED?1500:0};ANIMS.add(a);el._a=a;el.innerHTML=drawAnim(a.name,a.at,a.cue)});
   if(!rafOn){rafOn=true;requestAnimationFrame(loop)}
 }
 function loop(now){
-  for(const a of ANIMS){ if(!a.el.isConnected){ANIMS.delete(a);continue} if(a.paused) continue; a.at=now-a.t0; if(a.cycle){const nm=a.cycle[Math.floor(a.at/6800)%a.cycle.length]; if(nm!==a.name){a.name=nm; const lb=a.el.parentElement.querySelector('.demo-state'); if(lb) lb.textContent=LABEL[nm]||nm;}} a.el.innerHTML=drawAnim(a.name,a.at); }
+  for(const a of ANIMS){ if(!a.el.isConnected){ANIMS.delete(a);continue} if(a.paused) continue; a.at=now-a.t0; if(a.cycle){const nm=a.cycle[Math.floor(a.at/6800)%a.cycle.length]; if(nm!==a.name){a.name=nm; const lb=a.el.parentElement.querySelector('.demo-state'); if(lb) lb.textContent=LABEL[nm]||nm;}} a.el.innerHTML=drawAnim(a.name,a.at,a.cue); }
   if(ANIMS.size) requestAnimationFrame(loop); else rafOn=false;
 }
 function toggleAnim(el){const a=el._a;if(!a)return;a.paused=!a.paused;if(!a.paused){a.t0=performance.now()-a.at;if(!rafOn){rafOn=true;requestAnimationFrame(loop)}} const b=el.parentElement.querySelector('.demo-state');if(b)b.textContent=a.paused?'Paused. Tap to play':'Tap to pause';}
-const demoSvg=(name,cls='demo')=>ANIM[name]?`<button class="${cls}" data-act="toggleanim" aria-label="Animation showing ${name}. Tap to pause or play."><svg viewBox="0 -22 240 192" data-anim="${name}" role="img"></svg><span class="demo-state small">${REDUCED?'Paused. Tap to play':'Tap to pause'}</span></button>`:'';
+const demoSvg=(name,cls='demo')=>ANIM[name]?`<button class="${cls}" data-act="toggleanim" aria-label="Animation showing ${name}. Tap to pause or play."><svg viewBox="0 -22 240 192" data-anim="${name}" data-cue="1" role="img"></svg><span class="demo-state small">${REDUCED?'Paused. Tap to play':'Tap to pause'}</span></button>`:'';
 
 function findEx(name){for(const s of ORDER)for(const e of PROGRAM[s].ex){if(e.name===name)return {e,v:e};const a=e.alts.find(x=>x.name===name);if(a)return {e,v:{...e,...a}}}return null}
 function demoSheet(name){
